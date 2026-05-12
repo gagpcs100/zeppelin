@@ -3,6 +3,7 @@ import { CONFIG } from "../config.js";
 import { composeTransform, multiply } from "../math/transformations.js";
 import { createMaterial, clamp } from "../utils/helpers.js";
 import { createPropeller, drawPropeller } from "./Propeller.js";
+import { clampToCircle, resolveWallCollision } from "../utils/collision.js";
 
 export function createZeppelin(gl, textures) {
   const body = twgl.primitives.createSphereBufferInfo(gl, 1, 32, 16);
@@ -11,6 +12,7 @@ export function createZeppelin(gl, textures) {
 
   return {
     position: [...CONFIG.zeppelin.startPosition],
+    previousPosition: [...CONFIG.zeppelin.startPosition],
     rotationY: 0,
     propeller: createPropeller(gl, textures),
 
@@ -74,6 +76,12 @@ export function createZeppelin(gl, textures) {
 }
 
 export function updateZeppelin(zeppelin, input, deltaTime) {
+  // 1. Salvar posição anterior (para detecção de cruzamento de muralha)
+  zeppelin.previousPosition[0] = zeppelin.position[0];
+  zeppelin.previousPosition[1] = zeppelin.position[1];
+  zeppelin.previousPosition[2] = zeppelin.position[2];
+
+  // 2. Ler input e mover
   const keys = input.keys;
 
   if (keys.has("KeyA") || keys.has("ArrowLeft")) {
@@ -85,32 +93,56 @@ export function updateZeppelin(zeppelin, input, deltaTime) {
   }
 
   // O zeppelin foi modelado apontando para o eixo X.
-  // Por isso a frente dele é baseada em cos/sin no eixo X/Z.
+  // O forward agora é um vetor 3D que inclui o pitch controlado pelo mouse,
+  // permitindo subir/descer diagonalmente ao andar.
+  const pitch = input.movementPitch || 0;
+  const cosPitch = Math.cos(pitch);
   const forward = [
-    -Math.cos(zeppelin.rotationY),
-    0,
-    Math.sin(zeppelin.rotationY),
+    -Math.cos(zeppelin.rotationY) * cosPitch,
+    Math.sin(pitch),
+    Math.sin(zeppelin.rotationY) * cosPitch,
   ];
 
   if (keys.has("KeyW") || keys.has("ArrowUp")) {
     zeppelin.position[0] += forward[0] * CONFIG.zeppelin.speed * deltaTime;
+    zeppelin.position[1] += forward[1] * CONFIG.zeppelin.speed * deltaTime;
     zeppelin.position[2] += forward[2] * CONFIG.zeppelin.speed * deltaTime;
   }
 
   if (keys.has("KeyS") || keys.has("ArrowDown")) {
     zeppelin.position[0] -= forward[0] * CONFIG.zeppelin.speed * deltaTime;
+    zeppelin.position[1] -= forward[1] * CONFIG.zeppelin.speed * deltaTime;
     zeppelin.position[2] -= forward[2] * CONFIG.zeppelin.speed * deltaTime;
   }
 
-  if (keys.has("KeyQ")) {
-    zeppelin.position[1] += CONFIG.zeppelin.verticalSpeed * deltaTime;
+  // 3. Resolver colisões com muralhas (interna → externa)
+  for (const wallCfg of CONFIG.walls) {
+    const resolved = resolveWallCollision(
+      zeppelin.previousPosition,
+      zeppelin.position,
+      wallCfg.radius,
+      wallCfg.height,
+      1.5,   // margem XZ — raio efetivo do zeppelin
+      0.5    // margem Y — folga acima do topo para considerar "passa por cima"
+    );
+    zeppelin.position[0] = resolved[0];
+    zeppelin.position[1] = resolved[1];
+    zeppelin.position[2] = resolved[2];
   }
 
-  if (keys.has("KeyE")) {
-    zeppelin.position[1] -= CONFIG.zeppelin.verticalSpeed * deltaTime;
-  }
+  // 4. Clamp circular do mundo
+  const clamped = clampToCircle(
+    zeppelin.position,
+    [0, 0, 0],
+    CONFIG.world.radius - 1.5 // margem ~ "raio efetivo" do zeppelin
+  );
+  zeppelin.position[0] = clamped[0];
+  zeppelin.position[2] = clamped[2];
 
-  zeppelin.position[1] = clamp(zeppelin.position[1], 5, 45);
+  // 5. Clamp vertical
+  zeppelin.position[1] = clamp(zeppelin.position[1], CONFIG.zeppelin.minHeight, CONFIG.zeppelin.maxHeight);
+
+  // 6. Atualizar hélice
   zeppelin.propeller.angle += CONFIG.zeppelin.propellerSpeed * deltaTime;
 }
 

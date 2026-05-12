@@ -4,6 +4,7 @@ import { createGround } from "../objects/Ground.js";
 import { createRoad } from "../objects/Road.js";
 import { createHouse } from "../objects/House.js";
 import { createTree } from "../objects/Tree.js";
+import { createWall } from "../objects/Wall.js";
 import { createZeppelin } from "../objects/Zeppelin.js";
 import { createSkybox } from "../objects/Skybox.js";
 import { createObjModel } from "../objects/ObjModel.js";
@@ -45,6 +46,8 @@ export async function createScene(gl) {
     createTree(gl, textures, [25, 0, 38], 1.0),
   ];
 
+  const walls = CONFIG.walls.map((w) => createWall(gl, textures, w));
+
   const zeppelin = createZeppelin(gl, textures);
   const skybox = createSkybox(gl);
   const lights = createLights();
@@ -61,6 +64,7 @@ export async function createScene(gl) {
     roads,
     houses,
     trees,
+    walls,
     objModels,
     zeppelin,
     skybox,

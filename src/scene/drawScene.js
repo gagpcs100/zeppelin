@@ -2,6 +2,7 @@ import * as twgl from "twgl.js";
 import { createCameraMatrices } from "../core/camera.js";
 import { drawHouse } from "../objects/House.js";
 import { drawTree } from "../objects/Tree.js";
+import { drawWall } from "../objects/Wall.js";
 import { drawZeppelin } from "../objects/Zeppelin.js";
 import { drawSkybox } from "../objects/Skybox.js";
 import { drawObjModel } from "../objects/ObjModel.js";
@@ -94,6 +95,11 @@ export function drawScene(gl, renderer, programs, scene, input, elapsedTime) {
     drawTree(gl, programs.phong, tree, commonUniforms, drawPart);
   }
 
+  // Muralhas concêntricas.
+  for (const wall of scene.walls) {
+    drawWall(gl, programs.phong, wall, commonUniforms, drawPart);
+  }
+
   // Modelos .obj carregados (opcional do enunciado). Lista vazia = ignorado.
   for (const model of scene.objModels) {
     drawObjModel(gl, programs.phong, model, commonUniforms, drawPart);
@@ -130,9 +136,10 @@ function drawHud(input) {
 
   hud.innerHTML = `
     <strong>TP2 - Zeppelin</strong><br>
-    W/S: frente/trás | A/D: virar | Q/E: subir/descer<br>
-    1: câmera top-down | 2: câmera lateral | C: alternar lado lateral<br>
+    W/S: frente/trás | A/D: virar<br>
+    1: câmera top-down | 2: câmera lateral (C: alternar lado) | 3: câmera orbital (mouse controla)<br>
     L: iluminação ${input.lightingEnabled ? "ligada" : "desligada"} |
-    N: neblina ${input.fogEnabled ? "ligada" : "desligada"}
+    N: neblina ${input.fogEnabled ? "ligada" : "desligada"} |
+    Modo: ${input.cameraMode}
   `;
 }
