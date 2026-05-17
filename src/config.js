@@ -39,9 +39,9 @@ export const CONFIG = {
   },
 
   walls: [
-    { radius: 40, height: 30, color: [0.78, 0.76, 0.72, 1] },
-    { radius: 75, height: 30, color: [0.66, 0.64, 0.60, 1] },
-    { radius: 115, height: 30, color: [0.55, 0.53, 0.50, 1] },
+    { radius: 40, height: 50, color: [0.78, 0.76, 0.72, 1] },
+    { radius: 75, height: 50, color: [0.66, 0.64, 0.60, 1] },
+    { radius: 115, height: 50, color: [0.55, 0.53, 0.50, 1] },
   ],
 
   light: {

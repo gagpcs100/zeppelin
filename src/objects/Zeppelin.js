@@ -71,6 +71,48 @@ export function createZeppelin(gl, textures) {
           shininess: 25,
         }),
       },
+
+      engineLeft: {
+        bufferInfo: body,
+        local: composeTransform({
+          translation: [-1.5, -0.5, 1.6],
+          scale: [1.8, 0.45, 0.45],
+        }),
+        material: createMaterial({
+          color: [0.4, 0.4, 0.4, 1],
+          texture: textures.metal,
+          useTexture: true,
+          shininess: 50,
+        }),
+      },
+
+      engineRight: {
+        bufferInfo: body,
+        local: composeTransform({
+          translation: [-1.5, -0.5, -1.6],
+          scale: [1.8, 0.45, 0.45],
+        }),
+        material: createMaterial({
+          color: [0.4, 0.4, 0.4, 1],
+          texture: textures.metal,
+          useTexture: true,
+          shininess: 50,
+        }),
+      },
+
+      headlight: {
+        bufferInfo: body,
+        local: composeTransform({
+          translation: [5.3, -0.2, 0],
+          scale: [0.35, 0.35, 0.35],
+        }),
+        material: createMaterial({
+          color: [1.0, 1.0, 0.5, 1],
+          texture: textures.glass,
+          useTexture: false, // Solid bright color
+          shininess: 100,
+        }),
+      },
     },
   };
 }
@@ -84,35 +126,50 @@ export function updateZeppelin(zeppelin, input, deltaTime) {
   // 2. Ler input e mover
   const keys = input.keys;
 
+  if (zeppelin.velocity === undefined) zeppelin.velocity = 0;
+  if (zeppelin.rotationZ === undefined) zeppelin.rotationZ = 0;
+  if (zeppelin.pitch === undefined) zeppelin.pitch = 0;
+
+  const targetVelocity = (keys.has("KeyW") || keys.has("ArrowUp")) ? CONFIG.zeppelin.speed : ((keys.has("KeyS") || keys.has("ArrowDown")) ? -CONFIG.zeppelin.speed : 0);
+  
+  // Interpolate velocity for momentum effect
+  zeppelin.velocity += (targetVelocity - zeppelin.velocity) * 2.0 * deltaTime;
+
+  let turning = 0;
   if (keys.has("KeyA") || keys.has("ArrowLeft")) {
+    turning = 1;
     zeppelin.rotationY += CONFIG.zeppelin.turnSpeed * deltaTime;
   }
-
   if (keys.has("KeyD") || keys.has("ArrowRight")) {
+    turning = -1;
     zeppelin.rotationY -= CONFIG.zeppelin.turnSpeed * deltaTime;
   }
 
-  // O zeppelin foi modelado apontando para o eixo X.
-  // O forward agora é um vetor 3D que inclui o pitch controlado pelo mouse,
-  // permitindo subir/descer diagonalmente ao andar.
-  const pitch = input.movementPitch || 0;
-  const cosPitch = Math.cos(pitch);
+  // Smooth roll based on turning
+  const targetRoll = turning * 0.35; // max roll angle
+  zeppelin.rotationZ += (targetRoll - zeppelin.rotationZ) * 4.0 * deltaTime;
+
+  // Smooth pitch based on mouse pitch (if any)
+  const targetPitch = input.movementPitch || 0;
+  zeppelin.pitch += (targetPitch - zeppelin.pitch) * 4.0 * deltaTime;
+
+  const cosPitch = Math.cos(zeppelin.pitch);
   const forward = [
     -Math.cos(zeppelin.rotationY) * cosPitch,
-    Math.sin(pitch),
+    Math.sin(zeppelin.pitch),
     Math.sin(zeppelin.rotationY) * cosPitch,
   ];
 
-  if (keys.has("KeyW") || keys.has("ArrowUp")) {
-    zeppelin.position[0] += forward[0] * CONFIG.zeppelin.speed * deltaTime;
-    zeppelin.position[1] += forward[1] * CONFIG.zeppelin.speed * deltaTime;
-    zeppelin.position[2] += forward[2] * CONFIG.zeppelin.speed * deltaTime;
-  }
+  zeppelin.position[0] += forward[0] * zeppelin.velocity * deltaTime;
+  zeppelin.position[1] += forward[1] * zeppelin.velocity * deltaTime;
+  zeppelin.position[2] += forward[2] * zeppelin.velocity * deltaTime;
 
-  if (keys.has("KeyS") || keys.has("ArrowDown")) {
-    zeppelin.position[0] -= forward[0] * CONFIG.zeppelin.speed * deltaTime;
-    zeppelin.position[1] -= forward[1] * CONFIG.zeppelin.speed * deltaTime;
-    zeppelin.position[2] -= forward[2] * CONFIG.zeppelin.speed * deltaTime;
+  // Direct vertical movement controls (always available)
+  if (keys.has("KeyE") || keys.has("Space")) {
+    zeppelin.position[1] += CONFIG.zeppelin.verticalSpeed * deltaTime;
+  }
+  if (keys.has("KeyQ") || keys.has("ShiftLeft")) {
+    zeppelin.position[1] -= CONFIG.zeppelin.verticalSpeed * deltaTime;
   }
 
   // 3. Resolver colisões com muralhas (interna → externa)
@@ -147,9 +204,13 @@ export function updateZeppelin(zeppelin, input, deltaTime) {
 }
 
 export function drawZeppelin(gl, programInfo, zeppelin, commonUniforms, drawPart) {
+  // Add subtle vertical bobbing based on time
+  const time = performance.now() / 1000;
+  const bobbing = Math.sin(time * 2) * 0.2;
+
   const baseWorld = composeTransform({
-    translation: zeppelin.position,
-    rotation: [0, zeppelin.rotationY, 0],
+    translation: [zeppelin.position[0], zeppelin.position[1] + bobbing, zeppelin.position[2]],
+    rotation: [zeppelin.pitch || 0, zeppelin.rotationY, zeppelin.rotationZ || 0],
   });
 
   for (const part of Object.values(zeppelin.parts)) {

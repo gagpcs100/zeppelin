@@ -136,7 +136,7 @@ function drawHud(input) {
 
   hud.innerHTML = `
     <strong>TP2 - Zeppelin</strong><br>
-    W/S: frente/trás | A/D: virar<br>
+    W/S: frente/trás | A/D: virar | Q/E: descer/subir<br>
     1: câmera top-down | 2: câmera lateral (C: alternar lado) | 3: câmera orbital (mouse controla)<br>
     L: iluminação ${input.lightingEnabled ? "ligada" : "desligada"} |
     N: neblina ${input.fogEnabled ? "ligada" : "desligada"} |
