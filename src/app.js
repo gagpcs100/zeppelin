@@ -18,6 +18,6 @@ export async function startApp() {
 
   startAnimationLoop((deltaTime, elapsedTime) => {
     updateScene(scene, input, deltaTime, elapsedTime);
-    drawScene(gl, renderer, programs, scene, input, elapsedTime);
+    drawScene(gl, renderer, programs, scene, input, deltaTime, elapsedTime);
   });
 }

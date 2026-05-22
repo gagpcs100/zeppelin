@@ -1,90 +1,185 @@
 import * as twgl from "twgl.js";
+import { parseMtl } from "./mtlParser.js";
+import { createMaterial } from "../utils/helpers.js";
 
-// Parser .obj minimalista. Suporta:
-//   v  x y z           (posição)
-//   vt u v             (coord de textura)
-//   vn x y z           (normal)
-//   f  a/b/c d/e/f ... (face triangulada via fan a partir do 1º vértice)
-// Não suporta: materiais (mtl), grupos, smoothing groups, faces sem normal.
-// Motivo do escopo enxuto: cobre os modelos do enunciado e não acumula peso
-// de uma lib externa.
-export async function loadObjModel(gl, url) {
-  const response = await fetch(url);
-
-  if (!response.ok) {
-    throw new Error(`Erro ao carregar OBJ: ${url}`);
-  }
-
-  const text = await response.text();
-  const data = parseObj(text);
-
-  if (data.positions.length === 0) {
-    // Arquivo vazio ou sem geometria. Lança para o chamador decidir o que
-    // fazer (a `createScene` ignora e segue sem o modelo).
-    throw new Error(`OBJ sem geometria: ${url}`);
-  }
-
-  // Cria os buffers no formato esperado pelo shader phong (a_position,
-  // a_normal, a_texcoord). `setAttributePrefix("a_")` já foi chamado uma vez
-  // em shaderProgram.js, então os nomes batem.
-  return twgl.createBufferInfoFromArrays(gl, {
-    position: { numComponents: 3, data: data.positions },
-    normal: { numComponents: 3, data: data.normals },
-    texcoord: { numComponents: 2, data: data.texcoords },
-  });
+// Resolve um caminho de asset da pasta public/ levando em conta o `base` do
+// Vite (ex.: "/zeppelin/"). Um fetch em runtime NÃO passa pela reescrita de
+// caminhos do Vite, então um caminho absoluto "/models/..." cairia fora do
+// base e daria 404. `base` é injetável para teste; em runtime usa o valor
+// configurado (`import.meta.env.BASE_URL`).
+export function resolveAssetUrl(path, base = import.meta.env.BASE_URL) {
+  const cleanBase = base.endsWith("/") ? base.slice(0, -1) : base;
+  const cleanPath = path.startsWith("/") ? path : "/" + path;
+  return cleanBase + cleanPath;
 }
 
+// Carrega um .obj e, se houver, seu .mtl companheiro. Devolve:
+//   { submeshes: [{ bufferInfo, material }], bounds: { min:[x,y,z], max:[x,y,z] } }
+// `bounds` é a caixa envolvente da geometria crua (antes de qualquer
+// transformação), útil para enquadrar e para colisão.
+//   options.textureDir  diretório das texturas (default: diretório do .obj).
+//                        Útil quando o .mtl referencia texturas que estão em
+//                        uma subpasta diferente. O caminho do .mtl é reduzido
+//                        ao nome do arquivo (basename), ignorando subpastas.
+export async function loadObjModel(gl, url, options = {}) {
+  // Resolve o URL contra o base do Vite — o .mtl e as texturas são buscados
+  // relativos a este diretório, então o ajuste se propaga para todos.
+  const fullUrl = resolveAssetUrl(url);
+  const response = await fetch(encodeURI(fullUrl));
+  if (!response.ok) throw new Error(`Erro ao carregar OBJ: ${url}`);
+
+  const text = await response.text();
+  const { mtllib, groups } = parseObj(text);
+
+  const baseDir = fullUrl.slice(0, fullUrl.lastIndexOf("/") + 1);
+  let textureDir = baseDir;
+  if (options.textureDir) {
+    const resolved = resolveAssetUrl(options.textureDir);
+    textureDir = resolved.endsWith("/") ? resolved : resolved + "/";
+  }
+
+  // Carrega o .mtl, se declarado. Falha de .mtl não é fatal: seguimos com
+  // materiais padrão (cinza sem textura).
+  let mtl = {};
+  if (mtllib) {
+    try {
+      const mtlResponse = await fetch(encodeURI(baseDir + mtllib));
+      if (mtlResponse.ok) mtl = parseMtl(await mtlResponse.text());
+    } catch (error) {
+      console.warn(`Falha ao carregar .mtl de ${url}:`, error);
+    }
+  }
+
+  const submeshes = [];
+  const textureCache = new Map(); // nome do arquivo → textura (evita recarga)
+  const min = [Infinity, Infinity, Infinity];
+  const max = [-Infinity, -Infinity, -Infinity];
+  for (const group of groups) {
+    if (group.positions.length === 0) continue;
+
+    for (let i = 0; i < group.positions.length; i += 3) {
+      for (let a = 0; a < 3; a++) {
+        const c = group.positions[i + a];
+        if (c < min[a]) min[a] = c;
+        if (c > max[a]) max[a] = c;
+      }
+    }
+
+    const bufferInfo = twgl.createBufferInfoFromArrays(gl, {
+      position: { numComponents: 3, data: group.positions },
+      normal: { numComponents: 3, data: group.normals },
+      texcoord: { numComponents: 2, data: group.texcoords },
+    });
+
+    const def = group.material ? mtl[group.material] : null;
+    let texture = null;
+    if (def && def.map) {
+      // O .mtl pode prefixar a textura com uma subpasta (ex.: "Castelia
+      // City/x.jpg"); só o nome do arquivo importa — `textureDir` resolve.
+      const mapName = def.map.split(/[/\\]/).pop();
+      texture = textureCache.get(mapName);
+      if (!texture) {
+        texture = twgl.createTexture(gl, {
+          src: encodeURI(textureDir + mapName),
+          flipY: true,
+          // Mipmaps: sem eles, texturas que repetem muitas vezes (ex.: a
+          // água do oceano, tilada ~144×327) viram moiré ao serem vistas de
+          // longe. O WebGL2 gera mipmaps mesmo para texturas non-power-of-2.
+          min: gl.LINEAR_MIPMAP_LINEAR,
+          mag: gl.LINEAR,
+          wrap: gl.REPEAT,
+        });
+        textureCache.set(mapName, texture);
+      }
+    }
+
+    submeshes.push({
+      bufferInfo,
+      material: createMaterial({
+        color: def ? [...def.diffuse, def.opacity] : [0.7, 0.7, 0.7, 1],
+        specular: def ? [...def.specular, 1] : [1, 1, 1, 1],
+        shininess: def ? def.shininess : 20,
+        texture,
+        useTexture: texture !== null,
+      }),
+    });
+  }
+
+  if (submeshes.length === 0) throw new Error(`OBJ sem geometria: ${url}`);
+  return { submeshes, bounds: { min, max } };
+}
+
+// Faz o parse do texto de um .obj. Devolve:
+//   { mtllib: string|null, groups: [{ material, positions, normals, texcoords }] }
+// Cada grupo corresponde a um material distinto (usemtl). Se o arquivo não
+// usa materiais, há um único grupo com material = null.
 export function parseObj(text) {
-  const v = [];   // posições brutas (do arquivo)
+  const v = [];   // posições brutas do arquivo
   const vt = [];  // texcoords brutos
   const vn = [];  // normais brutas
 
-  // Saída final: arrays "achatados" indexados por vértice, prontos para a GPU.
-  const positions = [];
-  const normals = [];
-  const texcoords = [];
+  let mtllib = null;
+  const groups = [];
+  const groupByMaterial = new Map(); // material → grupo (funde reaparições)
+  let current = null; // grupo sendo preenchido
 
-  const lines = text.split("\n");
+  // Garante que existe um grupo ativo antes de emitir vértices. Há UM grupo
+  // por material: se o material já apareceu, reaproveita o grupo existente.
+  // Exportadores (ex.: SketchUp) costumam intercalar `usemtl` — sem essa
+  // fusão, um modelo grande viraria milhares de grupos (e de texturas).
+  function ensureGroup(material) {
+    if (current && current.material === material) return;
+    let group = groupByMaterial.get(material);
+    if (!group) {
+      group = { material, positions: [], normals: [], texcoords: [] };
+      groupByMaterial.set(material, group);
+      groups.push(group);
+    }
+    current = group;
+  }
 
-  for (const rawLine of lines) {
+  for (const rawLine of text.split("\n")) {
     const line = rawLine.trim();
     if (line.length === 0 || line.startsWith("#")) continue;
 
     const parts = line.split(/\s+/);
     const head = parts[0];
 
-    if (head === "v") {
+    if (head === "mtllib") {
+      // Nome pode ter espaços — pega tudo depois do "mtllib ".
+      mtllib = line.slice(line.indexOf(" ") + 1).trim();
+    } else if (head === "usemtl") {
+      ensureGroup(line.slice(line.indexOf(" ") + 1).trim());
+    } else if (head === "v") {
       v.push(parseFloat(parts[1]), parseFloat(parts[2]), parseFloat(parts[3]));
     } else if (head === "vt") {
       vt.push(parseFloat(parts[1]), parseFloat(parts[2]));
     } else if (head === "vn") {
       vn.push(parseFloat(parts[1]), parseFloat(parts[2]), parseFloat(parts[3]));
     } else if (head === "f") {
-      // Triangulação por leque: para uma face com N vértices (N >= 3),
-      // emitimos os triângulos (0,1,2), (0,2,3), (0,3,4), ...
+      if (!current) ensureGroup(null);
       const verts = parts.slice(1);
       for (let i = 1; i < verts.length - 1; i++) {
-        emitVertex(verts[0], v, vt, vn, positions, normals, texcoords);
-        emitVertex(verts[i], v, vt, vn, positions, normals, texcoords);
-        emitVertex(verts[i + 1], v, vt, vn, positions, normals, texcoords);
+        emitVertex(verts[0], v, vt, vn, current.positions, current.normals, current.texcoords);
+        emitVertex(verts[i], v, vt, vn, current.positions, current.normals, current.texcoords);
+        emitVertex(verts[i + 1], v, vt, vn, current.positions, current.normals, current.texcoords);
       }
     }
   }
 
-  // Se o OBJ não tinha normais (vn ausentes), calculamos por face: cada
-  // triângulo gera a mesma normal para seus 3 vértices (flat shading).
-  if (vn.length === 0) {
-    fillFlatNormals(positions, normals);
+  if (groups.length === 0) groups.push({ material: null, positions: [], normals: [], texcoords: [] });
+
+  // Pós-processamento por grupo: normais flat de fallback e texcoords ausentes.
+  const hadNormals = vn.length > 0;
+  for (const g of groups) {
+    if (!hadNormals) fillFlatNormals(g.positions, g.normals);
+    if (g.texcoords.length !== (g.positions.length / 3) * 2) {
+      g.texcoords.length = 0;
+      for (let i = 0; i < g.positions.length / 3; i++) g.texcoords.push(0, 0);
+    }
   }
 
-  // Se faltavam texcoords, preenchemos com (0,0) para casar com o vertex
-  // shader sem precisar de um shader alternativo.
-  if (texcoords.length !== (positions.length / 3) * 2) {
-    texcoords.length = 0;
-    for (let i = 0; i < positions.length / 3; i++) texcoords.push(0, 0);
-  }
-
-  return { positions, normals, texcoords };
+  return { mtllib, groups };
 }
 
 function emitVertex(token, v, vt, vn, positions, normals, texcoords) {

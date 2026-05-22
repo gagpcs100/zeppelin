@@ -12,7 +12,7 @@ export function createSkybox(gl) {
   };
 }
 
-export function drawSkybox(gl, programInfo, skybox, camera) {
+export function drawSkybox(gl, programInfo, skybox, camera, skyColors) {
   // Sem escrita no depth buffer: tudo desenhado depois cobre o skybox.
   gl.depthMask(false);
   // O cubo é renderizado de dentro; precisamos ver as faces internas.
@@ -33,6 +33,9 @@ export function drawSkybox(gl, programInfo, skybox, camera) {
     u_world: m4.identity(),
     u_view: viewNoTranslation,
     u_projection: camera.projection,
+    // Cores do gradiente do céu — variam com o horário (ver dayCycle.js).
+    u_skyZenith: skyColors.zenith,
+    u_skyHorizon: skyColors.horizon,
   });
 
   twgl.drawBufferInfo(gl, skybox.bufferInfo);

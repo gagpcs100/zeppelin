@@ -1,26 +1,30 @@
 import * as twgl from "twgl.js";
 import { createCameraMatrices } from "../core/camera.js";
-import { drawHouse } from "../objects/House.js";
-import { drawTree } from "../objects/Tree.js";
-import { drawWall } from "../objects/Wall.js";
+import { drawWorld } from "../objects/World.js";
 import { drawZeppelin } from "../objects/Zeppelin.js";
 import { drawSkybox } from "../objects/Skybox.js";
-import { drawObjModel } from "../objects/ObjModel.js";
+import { drawSky } from "../objects/Sky.js";
+import { getLighting, getSkyColors } from "./dayCycle.js";
 
 const m4 = twgl.m4;
 
 // Ponto único de renderização de um frame. Recebe tudo já preparado pela
 // `createScene` e `updateScene` e apenas submete à GPU na ordem correta.
-export function drawScene(gl, renderer, programs, scene, input, elapsedTime) {
+export function drawScene(gl, renderer, programs, scene, input, deltaTime, elapsedTime) {
   renderer.clear();
 
-  const camera = createCameraMatrices(gl, scene, input);
+  const camera = createCameraMatrices(gl, scene, input, scene.cameraState, deltaTime);
+
+  // Iluminação e cores do céu derivam do ciclo dia/noite (hora atual).
+  const timeOfDay = scene.dayCycle.timeOfDay;
+  const lighting = getLighting(timeOfDay);
+  const skyColors = getSkyColors(timeOfDay);
 
   // Skybox primeiro: como removemos a translação da matriz de visão antes de
   // desenhá-lo (em drawSkybox), ele cobre o "infinito". Como o cubo é grande
   // e o depthMask é desligado durante seu desenho, o que vier depois pinta
   // por cima naturalmente.
-  drawSkybox(gl, programs.skybox, scene.skybox, camera);
+  drawSkybox(gl, programs.skybox, scene.skybox, camera, skyColors);
 
   // Uniformes que valem para todos os objetos com shader Phong neste frame.
   const commonUniforms = {
@@ -28,13 +32,14 @@ export function drawScene(gl, renderer, programs, scene, input, elapsedTime) {
     u_projection: camera.projection,
     u_cameraPosition: camera.eye,
 
-    u_lightDirection: scene.lights.direction,
-    u_ambientLight: scene.lights.ambient,
-    u_diffuseLight: scene.lights.diffuse,
-    u_specularLight: scene.lights.specular,
+    u_lightDirection: lighting.direction,
+    u_ambientLight: lighting.ambient,
+    u_diffuseLight: lighting.diffuse,
+    u_specularLight: lighting.specular,
 
     u_lightingEnabled: input.lightingEnabled,
     u_fogEnabled: input.fogEnabled,
+    u_fogColor: skyColors.horizon,
   };
 
   // Função genérica que submete UMA parte à GPU. Qualquer objeto que respeite
@@ -64,56 +69,21 @@ export function drawScene(gl, renderer, programs, scene, input, elapsedTime) {
     twgl.drawBufferInfo(gl, bufferInfo);
   };
 
-  // Chão (plano grande com textura de grama).
-  drawPart(
-    gl,
-    programs.phong,
-    scene.ground.bufferInfo,
-    scene.ground.world,
-    scene.ground.material,
-    commonUniforms
-  );
+  // Sol e lua: logo após o skybox, ainda "no infinito".
+  drawSky(gl, programs.phong, scene.sky, camera, timeOfDay, drawPart);
 
-  // Ruas (caixas finas).
-  for (const road of scene.roads) {
-    drawPart(
-      gl,
-      programs.phong,
-      road.bufferInfo,
-      road.world,
-      road.material,
-      commonUniforms
-    );
-  }
-
-  // Casas e árvores: cada uma é uma hierarquia de partes.
-  for (const house of scene.houses) {
-    drawHouse(gl, programs.phong, house, commonUniforms, drawPart);
-  }
-
-  for (const tree of scene.trees) {
-    drawTree(gl, programs.phong, tree, commonUniforms, drawPart);
-  }
-
-  // Muralhas concêntricas.
-  for (const wall of scene.walls) {
-    drawWall(gl, programs.phong, wall, commonUniforms, drawPart);
-  }
-
-  // Modelos .obj carregados (opcional do enunciado). Lista vazia = ignorado.
-  for (const model of scene.objModels) {
-    drawObjModel(gl, programs.phong, model, commonUniforms, drawPart);
-  }
+  // Mundo: o modelo .obj da cidade, com suas várias sub-meshes texturizadas.
+  drawWorld(gl, programs.phong, scene.world, commonUniforms, drawPart);
 
   // Zeppelin: hierarquia (corpo, cabine, lemes, hélice rotativa).
   drawZeppelin(gl, programs.phong, scene.zeppelin, commonUniforms, drawPart);
 
-  drawHud(input);
+  drawHud(input, timeOfDay, scene.autopilot.active);
 }
 
 // HUD em HTML é mais barato e legível que desenhar texto em WebGL.
 // Criado uma única vez e atualizado a cada frame.
-function drawHud(input) {
+function drawHud(input, timeOfDay, autopilotActive) {
   let hud = document.getElementById("hud");
 
   if (!hud) {
@@ -135,11 +105,21 @@ function drawHud(input) {
   }
 
   hud.innerHTML = `
-    <strong>TP2 - Zeppelin</strong><br>
-    W/S: frente/trás | A/D: virar | Q/E: descer/subir<br>
-    1: câmera top-down | 2: câmera lateral (C: alternar lado) | 3: câmera orbital (mouse controla)<br>
+    <strong>TP2 — Zeppelin sobre a cidade</strong><br>
+    Mouse: pilota o voo (curva e sobe/desce) | W/S: acelerar/frear<br>
+    A/D: virar | Q/E: subir/descer | 1/2/3: câmeras (C: lado da lateral)<br>
     L: iluminação ${input.lightingEnabled ? "ligada" : "desligada"} |
     N: neblina ${input.fogEnabled ? "ligada" : "desligada"} |
-    Modo: ${input.cameraMode}
+    T: dia/noite (${formatClock(timeOfDay)})<br>
+    P: piloto automático ${autopilotActive ? "LIGADO" : "desligado"} |
+    Câmera: ${input.cameraMode}
   `;
+}
+
+// Converte timeOfDay [0,1) para um relógio "HH:MM" (24h).
+function formatClock(timeOfDay) {
+  const totalMinutes = Math.floor(timeOfDay * 24 * 60);
+  const hh = Math.floor(totalMinutes / 60);
+  const mm = totalMinutes % 60;
+  return `${String(hh).padStart(2, "0")}:${String(mm).padStart(2, "0")}`;
 }

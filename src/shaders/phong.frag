@@ -20,6 +20,7 @@ uniform sampler2D u_texture;
 uniform bool u_useTexture;
 uniform bool u_lightingEnabled;
 uniform bool u_fogEnabled;
+uniform vec3 u_fogColor;
 
 out vec4 outColor;
 
@@ -53,10 +54,11 @@ void main() {
     u_specularColor.rgb * u_specularLight * specularAmount;
 
   if (u_fogEnabled) {
+    // Distâncias casadas com a escala do mundo (~1800 unidades de lado). A
+    // cor da névoa acompanha o céu (passada por drawScene).
     float dist = length(u_cameraPosition - v_worldPosition);
-    float fogAmount = smoothstep(35.0, 110.0, dist);
-    vec3 fogColor = vec3(0.65, 0.75, 0.85);
-    color = mix(color, fogColor, fogAmount);
+    float fogAmount = smoothstep(300.0, 1200.0, dist);
+    color = mix(color, u_fogColor, fogAmount);
   }
 
   outColor = vec4(color, baseColor.a);

@@ -3,75 +3,67 @@ import { CONFIG } from "../config.js";
 
 const m4 = twgl.m4;
 
-// Constrói as matrizes de projeção e visão a cada frame.
-// Decisão: a câmera é stateless — recalcula tudo a partir da posição atual do
-// zeppelin e do modo selecionado. Simples de raciocinar e não acumula erro.
-export function createCameraMatrices(gl, scene, input) {
-  const aspect = gl.canvas.width / Math.max(1, gl.canvas.height);
+// Estado persistente da câmera entre frames (para suavização). Criado uma vez.
+export function createCameraState() {
+  return { eye: null, target: null };
+}
 
-  // Projeção perspectiva: requisito obrigatório do TP2.
+// Interpola linearmente cada componente de a até b por t (limitado a 1).
+function lerp3(a, b, t) {
+  const k = Math.min(1, t);
+  return [a[0] + (b[0] - a[0]) * k, a[1] + (b[1] - a[1]) * k, a[2] + (b[2] - a[2]) * k];
+}
+
+// Constrói as matrizes de projeção e visão. `state` mantém o eye/target
+// suavizados entre frames; `deltaTime` controla a velocidade da suavização.
+export function createCameraMatrices(gl, scene, input, state, deltaTime) {
+  const aspect = gl.canvas.width / Math.max(1, gl.canvas.height);
   const projection = m4.perspective(
-    CONFIG.camera.fov,
-    aspect,
-    CONFIG.camera.near,
-    CONFIG.camera.far
+    CONFIG.camera.fov, aspect, CONFIG.camera.near, CONFIG.camera.far
   );
 
   const zeppelin = scene.zeppelin;
-  const position = zeppelin.position;
+  const p = zeppelin.position;
+  const cam = CONFIG.camera;
 
-  let eye;
-  let target;
-  let up = [0, 1, 0];
+  let desiredEye;
+  let desiredTarget = [p[0], p[1], p[2]];
 
   if (input.cameraMode === 1) {
-    // Modo 1: "vista superior" em 3/4 — alta e atrás do zeppelin, inclinada
-    // para baixo. Mostra a cidade inteira mantendo profundidade 3D.
-    eye = [
-      position[0],
-      position[1] + CONFIG.camera.topHeight,
-      position[2] + CONFIG.camera.topBack,
-    ];
-    target = [position[0], position[1], position[2]];
+    // Modo 1: vista superior em 3/4 — alta e atrás do zeppelin.
+    desiredEye = [p[0], p[1] + cam.topHeight, p[2] + cam.topBack];
   } else if (input.cameraMode === 2) {
-    // Modo 2: câmera lateral elevada com 4 ângulos.
+    // Modo 2: 4 vistas laterais elevadas.
+    const d = cam.sideDistance;
+    const h = cam.sideHeight;
     const side = input.sideCameraIndex;
-    const d = CONFIG.camera.sideDistance;
-    const h = CONFIG.camera.sideHeight;
-
-    if (side === 0) {
-      eye = [position[0] + d, position[1] + h, position[2]];
-    } else if (side === 1) {
-      eye = [position[0] - d, position[1] + h, position[2]];
-    } else if (side === 2) {
-      eye = [position[0], position[1] + h, position[2] + d];
-    } else {
-      eye = [position[0], position[1] + h, position[2] - d];
-    }
-    target = [position[0], position[1], position[2]];
+    if (side === 0) desiredEye = [p[0] + d, p[1] + h, p[2]];
+    else if (side === 1) desiredEye = [p[0] - d, p[1] + h, p[2]];
+    else if (side === 2) desiredEye = [p[0], p[1] + h, p[2] + d];
+    else desiredEye = [p[0], p[1] + h, p[2] - d];
   } else {
-    // Modo 3: 3ª pessoa orbital — câmera orbita ao redor do zeppelin,
-    // controlada pelo mouse (yaw = ângulo horizontal, pitch = elevação).
-    // A câmera sempre olha para o zeppelin.
-    const dist = CONFIG.camera.orbitDistance;
-    const yaw = input.cameraYaw;
-    const pitch = CONFIG.camera.orbitPitch;
-
-    // Coordenadas esféricas → cartesianas (relativas ao zeppelin).
-    // pitch=0 → horizontal; pitch=PI/2 → topo.
-    eye = [
-      position[0] + dist * Math.cos(pitch) * Math.sin(yaw),
-      position[1] + dist * Math.sin(pitch),
-      position[2] + dist * Math.cos(pitch) * Math.cos(yaw),
+    // Modo 3: chase cam — atrás do zeppelin, seguindo seu rumo.
+    // "atrás" = sentido oposto à frente do zeppelin (frente = +X local).
+    const back = -1;
+    const fx = Math.cos(zeppelin.rotationY);
+    const fz = -Math.sin(zeppelin.rotationY);
+    desiredEye = [
+      p[0] + back * fx * cam.chaseDistance,
+      p[1] + cam.chaseHeight,
+      p[2] + back * fz * cam.chaseDistance,
     ];
-
-    target = [position[0], position[1], position[2]];
   }
 
-  // m4.lookAt devolve a matriz da CÂMERA no mundo; o shader usa a inversa
-  // (view matrix), que leva o mundo para o espaço da câmera.
-  const camera = m4.lookAt(eye, target, up);
-  const view = m4.inverse(camera);
+  // Suavização: na primeira chamada, "salta" para a posição desejada.
+  if (!state.eye) {
+    state.eye = desiredEye;
+    state.target = desiredTarget;
+  } else {
+    const t = cam.smooth * deltaTime;
+    state.eye = lerp3(state.eye, desiredEye, t);
+    state.target = lerp3(state.target, desiredTarget, t);
+  }
 
-  return { projection, view, eye };
+  const camera = m4.lookAt(state.eye, state.target, [0, 1, 0]);
+  return { projection, view: m4.inverse(camera), eye: state.eye };
 }

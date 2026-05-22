@@ -2,53 +2,52 @@
 // espalhados pelo código e facilita ajustes finos (tamanho do mundo, FOV,
 // velocidades) em um único lugar.
 export const CONFIG = {
-  canvasId: "glcanvas",
+	canvasId: 'glcanvas',
 
-  world: {
-    radius: 150,        // raio do disco onde o zeppelin pode voar
-    size: 300,          // = 2 * radius — chão quadrado cobrindo o disco
-    roadWidth: 8,       // largura das ruas
-  },
+	// Mundo: um único modelo .obj pronto (cidade "wild town"). O World.js
+	// carrega, centra na origem, apoia no chão (Y=0) e escala por `scale`. Os
+	// limites de voo saem da bounding box resultante — não há muralhas.
+	world: {
+		modelPath: '/models/cenario/OBJ/wild town/wild town.obj',
+		textureDir: '/models/cenario/OBJ/wild town/Maps',
+		scale: 0.15, // modelo cru ~11977×1646×6944 → ~1198×165×694 unidades
+	},
 
-  zeppelin: {
-    startPosition: [0, 14, 0],
-    speed: 10,            // m/s no plano XZ
-    turnSpeed: 1.8,       // rad/s
-    verticalSpeed: 7,     // m/s em Y (Q/E)
-    propellerSpeed: 14,   // rad/s — rotação contínua da hélice
-    minHeight: 5,
-    maxHeight: 120,
-  },
+	zeppelin: {
+		startPosition: [0, 40, 0],
+		speed: 22, // m/s no plano XZ (mundo maior pede mais velocidade)
+		turnSpeed: 1.6, // rad/s — usado pelo teclado
+		verticalSpeed: 12, // m/s em Y
+		propellerSpeed: 16, // rad/s — rotação contínua da hélice
+		minHeight: 6,
+		maxHeight: 180,
+		accelEase: 2.5, // suavização da aceleração (maior = resposta mais rápida)
+	},
 
-  camera: {
-    fov: Math.PI / 4,
-    near: 0.1,
-    far: 600,
-    // Modo 1 (top-down em 3/4): altura e recuo em relação ao zeppelin.
-    topHeight: 55,
-    topBack: 42,
-    // Modo 2 (lateral): distância e altura em relação ao zeppelin
-    sideDistance: 28,
-    sideHeight: 10,
-    // Modo 3 (3ª pessoa orbital): controlado pelo mouse
-    mouseSensitivity: 0.003,
-    orbitDistance: 25,     // distância da câmera ao zeppelin
-    orbitPitch: 0.45,      // elevação fixa da câmera orbital (rad)
-    orbitYawSpeed: 2.5,   // rad/s — velocidade de rotação horizontal da câmera
-    orbitPitchSpeed: 1.5, // rad/s — velocidade de ajuste do pitch de movimento
-  },
+	camera: {
+		fov: Math.PI / 4,
+		near: 0.1,
+		far: 1400, // mundo maior → plano distante mais longe
+		topHeight: 95,
+		topBack: 78,
+		sideDistance: 48,
+		sideHeight: 18,
+		chaseDistance: 38, // câmera 3: distância atrás do zeppelin
+		chaseHeight: 14, // câmera 3: altura acima do zeppelin
+		smooth: 5.0, // fator de suavização (lerp) das câmeras que seguem
+	},
 
-  walls: [
-    { radius: 40, height: 50, color: [0.78, 0.76, 0.72, 1] },
-    { radius: 75, height: 50, color: [0.66, 0.64, 0.60, 1] },
-    { radius: 115, height: 50, color: [0.55, 0.53, 0.50, 1] },
-  ],
+	mouse: {
+		turnRate: 1.9, // rad/s de curva com o cursor no canto da tela
+		climbRate: 14, // m/s de subida/descida com o cursor no topo/base
+		deadZone: 0.08, // fração central da tela sem resposta
+	},
 
-  light: {
-    // Direção da luz direcional (apontando do "sol" para o chão).
-    direction: [-0.5, -1.0, -0.3],
-    ambient: [0.25, 0.25, 0.25],
-    diffuse: [0.9, 0.85, 0.75],
-    specular: [1.0, 1.0, 1.0],
-  },
+	// Ciclo dia/noite: o tempo avança sozinho (um ciclo completo a cada
+	// `cycleSeconds`). A tecla T salta entre dia e noite. As cores da luz e
+	// do céu por horário ficam em src/scene/dayCycle.js.
+	dayCycle: {
+		cycleSeconds: 300, // 5 minutos para um ciclo completo (dia + noite)
+		startTime: 0.34, // 0=meia-noite, 0.25=amanhecer, 0.5=meio-dia, 0.75=entardecer
+	},
 };

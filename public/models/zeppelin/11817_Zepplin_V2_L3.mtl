@@ -1,0 +1,68 @@
+# 3ds Max Wavefront OBJ Exporter v0.97b - (c)2007 guruware
+# File Created: 28.11.2011 11:12:36
+
+newmtl 11817_Zepplin_Cab
+	Ns 62.0000
+	Ni 1.5000
+	d 1.0000
+	Tr 0.0000
+	Tf 1.0000 1.0000 1.0000 
+	illum 2
+	Ka 1.0000 1.0000 1.0000
+	Kd 1.0000 1.0000 1.0000
+	Ks 0.8100 0.8100 0.8100
+	Ke 0.0000 0.0000 0.0000
+	map_Ka 11817_Zepplin_Cab_diff.jpg
+	map_Kd 11817_Zepplin_Cab_diff.jpg
+
+newmtl 11817_Zepplin
+	Ns 25.0000
+	Ni 1.5000
+	d 1.0000
+	Tr 0.0000
+	Tf 1.0000 1.0000 1.0000 
+	illum 2
+	Ka 1.0000 1.0000 1.0000
+	Kd 1.0000 1.0000 1.0000
+	Ks 0.5850 0.5850 0.5850
+	Ke 0.0000 0.0000 0.0000
+	map_Ka 11817_Zepplin_diff.jpg
+	map_Kd 11817_Zepplin_diff.jpg
+
+newmtl 11817_Zepplin_metall
+	Ns 49.0000
+	Ni 1.5000
+	d 1.0000
+	Tr 0.0000
+	Tf 1.0000 1.0000 1.0000 
+	illum 2
+	Ka 0.9804 0.9804 0.9804
+	Kd 0.9804 0.9804 0.9804
+	Ks 0.8100 0.8100 0.8100
+	Ke 0.0000 0.0000 0.0000
+
+newmtl 11817_Zepplin_Balon
+	Ns 10.0000
+	Ni 1.5000
+	d 1.0000
+	Tr 0.0000
+	Tf 1.0000 1.0000 1.0000 
+	illum 2
+	Ka 1.0000 1.0000 1.0000
+	Kd 1.0000 1.0000 1.0000
+	Ks 0.5130 0.5130 0.5130
+	Ke 0.0000 0.0000 0.0000
+	map_Ka 11817_Zepplin_Balon_diff.jpg
+	map_Kd 11817_Zepplin_Balon_diff.jpg
+
+newmtl 11817_Zepplin_Wheel
+	Ns 16.0000
+	Ni 1.5000
+	d 1.0000
+	Tr 0.0000
+	Tf 1.0000 1.0000 1.0000 
+	illum 2
+	Ka 0.0863 0.0863 0.0863
+	Kd 0.0863 0.0863 0.0863
+	Ks 0.4500 0.4500 0.4500
+	Ke 0.0000 0.0000 0.0000

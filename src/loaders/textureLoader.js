@@ -1,5 +1,7 @@
 import * as twgl from 'twgl.js';
 
+// Textura de 1x1 pixel de cor sólida. Barata e suficiente para peças simples
+// (a hélice procedural do zeppelin) que não precisam de imagem real.
 export function createColorTexture(gl, rgba) {
 	return twgl.createTexture(gl, {
 		src: new Uint8Array(rgba),
@@ -10,18 +12,12 @@ export function createColorTexture(gl, rgba) {
 	});
 }
 
+// Texturas usadas pelos objetos gerados em código. Hoje só a hélice precisa
+// delas (corpo do zeppelin e mundo vêm de .obj com texturas próprias).
 export function createDefaultTextures(gl) {
 	return {
-		grass: twgl.createTexture(gl, { src: '/textures/grass.jpg', minMag: gl.LINEAR, wrap: gl.REPEAT }),
-		road: twgl.createTexture(gl, { src: '/textures/road.jpg', minMag: gl.LINEAR, wrap: gl.REPEAT }),
-		wall: twgl.createTexture(gl, { src: '/textures/stone.png', minMag: gl.LINEAR, wrap: gl.REPEAT }),
-		roof: twgl.createTexture(gl, { src: '/textures/wood.png', minMag: gl.LINEAR, wrap: gl.REPEAT }),
-		wood: twgl.createTexture(gl, { src: '/textures/wood.png', minMag: gl.LINEAR, wrap: gl.REPEAT }),
-		leaves: createColorTexture(gl, [40, 120, 45, 255]),
-		metal: twgl.createTexture(gl, { src: '/textures/metal.png', minMag: gl.LINEAR, wrap: gl.REPEAT }),
-		glass: createColorTexture(gl, [120, 200, 255, 180]),
+		metal: createColorTexture(gl, [150, 150, 158, 255]),
 		black: createColorTexture(gl, [20, 20, 25, 255]),
-		red: createColorTexture(gl, [170, 25, 35, 255]),
 	};
 }
 
