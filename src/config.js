@@ -11,6 +11,9 @@ export const CONFIG = {
 		modelPath: '/models/cenario/OBJ/wild town/wild town.obj',
 		textureDir: '/models/cenario/OBJ/wild town/Maps',
 		scale: 0.15, // modelo cru ~11977×1646×6944 → ~1198×165×694 unidades
+		// Colisão com os prédios: grade de alturas (height field). cellSize em
+		// unidades de mundo (mundo ~1198×694 → grade ~300×174 células).
+		collision: { cellSize: 4 },
 	},
 
 	zeppelin: {
@@ -21,6 +24,12 @@ export const CONFIG = {
 		propellerSpeed: 16, // rad/s — rotação contínua da hélice
 		minHeight: 6,
 		maxHeight: 180,
+		buildingClearance: 8, // folga (em Y) que o zeppelin mantém acima dos telhados
+		buildingPushEase: 5, // suavização da subida sobre prédios (maior = sobe mais rápido)
+		// Meia-extensão do corpo, para amostrar a colisão em vários pontos (nariz,
+		// cauda e laterais) e não só no centro — o corpo do zeppelin é alongado.
+		bodyHalfLength: 14, // ~metade do comprimento (nariz↔cauda) em unidades de mundo
+		bodyHalfWidth: 5,   // ~metade da largura (lateral)
 		accelEase: 2.5, // suavização da aceleração (maior = resposta mais rápida)
 	},
 

@@ -106,7 +106,17 @@ export async function loadObjModel(gl, url, options = {}) {
   }
 
   if (submeshes.length === 0) throw new Error(`OBJ sem geometria: ${url}`);
-  return { submeshes, bounds: { min, max } };
+
+  const result = { submeshes, bounds: { min, max } };
+  if (options.keepPositions) {
+    // Posições cruas por grupo (já trianguladas: 9 floats por triângulo),
+    // usadas para construir o height field de colisão no World. Mantidas só
+    // quando pedido — o zeppelin não precisa.
+    result.positions = groups
+      .filter((g) => g.positions.length > 0)
+      .map((g) => g.positions);
+  }
+  return result;
 }
 
 // Faz o parse do texto de um .obj. Devolve:

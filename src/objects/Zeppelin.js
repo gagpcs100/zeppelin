@@ -3,7 +3,18 @@ import { CONFIG } from "../config.js";
 import { composeTransform, multiply } from "../math/transformations.js";
 import { clamp } from "../utils/helpers.js";
 import { createPropeller, drawPropeller } from "./Propeller.js";
-import { clampToBounds } from "../utils/collision.js";
+import { clampToBounds, maxSurfaceHeightAt } from "../utils/collision.js";
+
+// Pontos do corpo onde a colisão é amostrada (offsets [frente, lado] em
+// unidades de mundo): nariz, centro, cauda e as duas laterais. Cobrir o corpo
+// alongado evita que o nariz entre num prédio antes de o centro perceber.
+const COLLISION_SAMPLES = [
+  [CONFIG.zeppelin.bodyHalfLength, 0],  // nariz
+  [0, 0],                               // centro
+  [-CONFIG.zeppelin.bodyHalfLength, 0], // cauda
+  [0, CONFIG.zeppelin.bodyHalfWidth],   // lateral direita
+  [0, -CONFIG.zeppelin.bodyHalfWidth],  // lateral esquerda
+];
 
 // Cria o zeppelin: corpo carregado do .obj (multi-material texturizado) e uma
 // hélice procedural na traseira como componente de rotação contínua.
@@ -62,7 +73,7 @@ export function getPlayerControls(input) {
 
 // Atualiza a física do zeppelin a partir de `controls` { turn, climb,
 // throttle } — venham eles do jogador ou do piloto automático.
-export function updateZeppelin(zeppelin, controls, deltaTime, worldBounds) {
+export function updateZeppelin(zeppelin, controls, deltaTime, worldBounds, heightField) {
   const cfg = CONFIG.zeppelin;
 
   // 1. Velocidade com easing (aceleração/frenagem suaves). throttle ∈ [-1,1];
@@ -98,6 +109,22 @@ export function updateZeppelin(zeppelin, controls, deltaTime, worldBounds) {
     zeppelin.position[0] = clamped[0];
     zeppelin.position[2] = clamped[2];
   }
+
+  // Colisão com os prédios: o alvo de altura mínima é o telhado mais alto sob
+  // qualquer ponto do corpo (nariz, cauda, laterais) mais a folga. A subida
+  // até esse alvo é GRADUAL (easing), não um salto — dá a sensação de "subir a
+  // rampa" ao avançar sobre o prédio. Voar alto fica livre.
+  let targetMinY = cfg.minHeight;
+  if (heightField) {
+    const surface = maxSurfaceHeightAt(
+      heightField, zeppelin.position[0], zeppelin.position[2], zeppelin.rotationY, COLLISION_SAMPLES
+    );
+    targetMinY = Math.max(targetMinY, surface + cfg.buildingClearance);
+  }
+  if (zeppelin.position[1] < targetMinY) {
+    zeppelin.position[1] += (targetMinY - zeppelin.position[1]) * cfg.buildingPushEase * deltaTime;
+  }
+  // Limites absolutos: nunca abaixo do chão nem acima do teto.
   zeppelin.position[1] = clamp(zeppelin.position[1], cfg.minHeight, cfg.maxHeight);
 
   // 8. Girar a hélice (componente de rotação contínua).

@@ -1,6 +1,7 @@
 import { loadObjModel } from "../loaders/objLoader.js";
 import { CONFIG } from "../config.js";
 import { composeTransform } from "../math/transformations.js";
+import { buildHeightField } from "../utils/collision.js";
 
 // O mundo: um único modelo .obj pronto (cidade Castelia). Carrega o arquivo,
 // centra a geometria na origem em X/Z, apoia o ponto mais baixo em Y=0 e
@@ -9,8 +10,9 @@ import { composeTransform } from "../math/transformations.js";
 // o voo do zeppelin (ver collision.js).
 export async function createWorld(gl) {
   const cfg = CONFIG.world;
-  const { submeshes, bounds } = await loadObjModel(gl, cfg.modelPath, {
+  const { submeshes, bounds, positions } = await loadObjModel(gl, cfg.modelPath, {
     textureDir: cfg.textureDir,
+    keepPositions: true,
   });
 
   const s = cfg.scale;
@@ -34,7 +36,14 @@ export async function createWorld(gl) {
     max: bounds.max.map((c, i) => c * s + translation[i]),
   };
 
-  return { submeshes, world, bounds: worldBounds };
+  // Grade de alturas em coordenadas de mundo: mesma escala+translação aplicada
+  // à geometria. Alimenta a colisão por empurrão vertical (ver collision.js e
+  // updateZeppelin). `positions` pode não vir se o loader falhar — protege-se.
+  const heightField = positions
+    ? buildHeightField(positions, { scale: s, translation }, cfg.collision)
+    : null;
+
+  return { submeshes, world, bounds: worldBounds, heightField };
 }
 
 export function drawWorld(gl, programInfo, worldObj, commonUniforms, drawPart) {

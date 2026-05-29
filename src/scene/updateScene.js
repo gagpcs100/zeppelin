@@ -13,5 +13,5 @@ export function updateScene(scene, input, deltaTime, elapsedTime) {
     scene.autopilot, scene.zeppelin, scene.world.bounds, input, deltaTime
   );
   const controls = autoControls || getPlayerControls(input);
-  updateZeppelin(scene.zeppelin, controls, deltaTime, scene.world.bounds);
+  updateZeppelin(scene.zeppelin, controls, deltaTime, scene.world.bounds, scene.world.heightField);
 }
