@@ -106,7 +106,7 @@ function drawHud(input, timeOfDay, autopilotActive) {
 
   hud.innerHTML = `
     <strong>TP2 — Zeppelin sobre a cidade</strong><br>
-    Mouse: pilota o voo (curva e sobe/desce) | W/S: acelerar/frear<br>
+    Mouse: pilota o voo (camera 3) | W/S: acelerar/frear<br>
     A/D: virar | Q/E: subir/descer | 1/2/3: câmeras (C: lado da lateral)<br>
     L: iluminação ${input.lightingEnabled ? "ligada" : "desligada"} |
     N: neblina ${input.fogEnabled ? "ligada" : "desligada"} |
