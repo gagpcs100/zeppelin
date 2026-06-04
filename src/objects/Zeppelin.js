@@ -3,7 +3,7 @@ import { CONFIG } from "../config.js";
 import { composeTransform, multiply } from "../math/transformations.js";
 import { clamp } from "../utils/helpers.js";
 import { createPropeller, drawPropeller } from "./Propeller.js";
-import { clampToBounds, maxSurfaceHeightAt } from "../utils/collision.js";
+import { clampToBounds, maxSurfaceHeightAt, slideAgainstBuildings } from "../utils/collision.js";
 
 // Pontos do corpo onde a colisão é amostrada (offsets [frente, lado] em
 // unidades de mundo): nariz, centro, cauda e as duas laterais. Cobrir o corpo
@@ -98,36 +98,46 @@ export function updateZeppelin(zeppelin, controls, deltaTime, worldBounds, heigh
   const targetPitch = climb * 0.2;
   zeppelin.pitch += (targetPitch - zeppelin.pitch) * 4.0 * deltaTime;
 
-  // 6. Avançar no plano XZ na direção atual.
+  // 6. Avançar no plano XZ, tratando os prédios como sólidos: ao bater, o
+  //    zeppelin TRAVA contra a parede e desliza de raspão (a colisão resolve X
+  //    e Z separadamente). Voar acima do telhado passa por cima livremente.
   const forward = [Math.cos(zeppelin.rotationY), 0, -Math.sin(zeppelin.rotationY)];
-  zeppelin.position[0] += forward[0] * zeppelin.velocity * deltaTime;
-  zeppelin.position[2] += forward[2] * zeppelin.velocity * deltaTime;
+  const dx = forward[0] * zeppelin.velocity * deltaTime;
+  const dz = forward[2] * zeppelin.velocity * deltaTime;
+  if (heightField) {
+    const [nx, nz] = slideAgainstBuildings(
+      heightField, zeppelin.position[0], zeppelin.position[2], dx, dz,
+      zeppelin.position[1], zeppelin.rotationY, COLLISION_SAMPLES, cfg.buildingClearance
+    );
+    zeppelin.position[0] = nx;
+    zeppelin.position[2] = nz;
+  } else {
+    zeppelin.position[0] += dx;
+    zeppelin.position[2] += dz;
+  }
 
-  // 7. Limites do mundo (caixa do .obj) e de altura.
+  // 7. Limites do mundo (caixa do .obj).
   if (worldBounds) {
     const clamped = clampToBounds(zeppelin.position, worldBounds, 8);
     zeppelin.position[0] = clamped[0];
     zeppelin.position[2] = clamped[2];
   }
 
-  // Colisão com os prédios: o alvo de altura mínima é o telhado mais alto sob
-  // qualquer ponto do corpo (nariz, cauda, laterais) mais a folga. A subida
-  // até esse alvo é GRADUAL (easing), não um salto — dá a sensação de "subir a
-  // rampa" ao avançar sobre o prédio. Voar alto fica livre.
-  let targetMinY = cfg.minHeight;
+  // 8. Altura: piso sólido (chão, ou telhado que está embaixo) e teto. O corpo
+  //    repousa sobre o telhado em vez de afundar; como o passo 6 impede entrar
+  //    embaixo de um telhado mais alto, este piso só atua onde já se está por
+  //    cima. Telhados mais altos que (maxHeight - folga) viram paredes que se
+  //    contorna, não rampas.
+  let floor = cfg.minHeight;
   if (heightField) {
     const surface = maxSurfaceHeightAt(
       heightField, zeppelin.position[0], zeppelin.position[2], zeppelin.rotationY, COLLISION_SAMPLES
     );
-    targetMinY = Math.max(targetMinY, surface + cfg.buildingClearance);
+    floor = Math.max(floor, Math.min(surface + cfg.buildingClearance, cfg.maxHeight));
   }
-  if (zeppelin.position[1] < targetMinY) {
-    zeppelin.position[1] += (targetMinY - zeppelin.position[1]) * cfg.buildingPushEase * deltaTime;
-  }
-  // Limites absolutos: nunca abaixo do chão nem acima do teto.
-  zeppelin.position[1] = clamp(zeppelin.position[1], cfg.minHeight, cfg.maxHeight);
+  zeppelin.position[1] = clamp(zeppelin.position[1], floor, cfg.maxHeight);
 
-  // 8. Girar a hélice (componente de rotação contínua).
+  // 9. Girar a hélice (componente de rotação contínua).
   zeppelin.propeller.angle += cfg.propellerSpeed * deltaTime;
 }
 

@@ -4,7 +4,12 @@ import { drawWorld } from "../objects/World.js";
 import { drawZeppelin } from "../objects/Zeppelin.js";
 import { drawSkybox } from "../objects/Skybox.js";
 import { drawSky } from "../objects/Sky.js";
-import { getLighting, getSkyColors } from "./dayCycle.js";
+import { CONFIG } from "../config.js";
+import { composeTransform } from "../math/transformations.js";
+import { getLighting, getSkyColors, getNightFactor } from "./dayCycle.js";
+import { assembleLights } from "./lights.js";
+import { createMaterial } from "../utils/helpers.js";
+import { shadowPlacement, drawShadow } from "../objects/Shadow.js";
 
 const m4 = twgl.m4;
 
@@ -19,6 +24,8 @@ export function drawScene(gl, renderer, programs, scene, input, deltaTime, elaps
   const timeOfDay = scene.dayCycle.timeOfDay;
   const lighting = getLighting(timeOfDay);
   const skyColors = getSkyColors(timeOfDay);
+  const nightFactor = getNightFactor(timeOfDay);
+  const lights = assembleLights(scene, nightFactor);
 
   // Skybox primeiro: como removemos a translação da matriz de visão antes de
   // desenhá-lo (em drawSkybox), ele cobre o "infinito". Como o cubo é grande
@@ -40,6 +47,12 @@ export function drawScene(gl, renderer, programs, scene, input, deltaTime, elaps
     u_lightingEnabled: input.lightingEnabled,
     u_fogEnabled: input.fogEnabled,
     u_fogColor: skyColors.horizon,
+    u_pointLightCount: lights.count,
+    u_pointLightPos: lights.pos,
+    u_pointLightColor: lights.color,
+    u_pointLightRange: lights.range,
+    u_pointLightDir: lights.dir,
+    u_pointLightCosCutoff: lights.cosCutoff,
   };
 
   // Função genérica que submete UMA parte à GPU. Qualquer objeto que respeite
@@ -75,10 +88,40 @@ export function drawScene(gl, renderer, programs, scene, input, deltaTime, elaps
   // Mundo: o modelo .obj da cidade, com suas várias sub-meshes texturizadas.
   drawWorld(gl, programs.phong, scene.world, commonUniforms, drawPart);
 
+  // Blob shadow: disco translúcido sob o zeppelin, assentado na superfície.
+  const placement = shadowPlacement(scene.zeppelin, scene.world.heightField, CONFIG.shadow);
+  drawShadow(gl, programs.phong, scene.shadow, placement, camera, drawPart);
+
   // Zeppelin: hierarquia (corpo, cabine, lemes, hélice rotativa).
   drawZeppelin(gl, programs.phong, scene.zeppelin, commonUniforms, drawPart);
 
+  // Marcadores dos postes: esferinhas emissivas, visíveis só à noite.
+  drawLampMarkers(gl, programs.phong, scene, camera, nightFactor, drawPart);
+
   drawHud(input, timeOfDay, scene.autopilot.active);
+}
+
+// Esferinhas emissivas nas posições dos postes — acendem com o nightFactor.
+function drawLampMarkers(gl, programInfo, scene, camera, nightFactor, drawPart) {
+  if (nightFactor <= 0.01) return; // de dia não aparecem
+
+  const uniforms = {
+    u_view: camera.view,
+    u_projection: camera.projection,
+    u_cameraPosition: camera.eye,
+    u_lightingEnabled: false, // emissivo
+    u_fogEnabled: false,
+  };
+
+  for (const lamp of scene.lamps) {
+    // Cor do bulbo: a cor base do poste, atenuada pelo nightFactor (brilho).
+    const c = CONFIG.lights.lampColor;
+    const material = createMaterial({
+      color: [c[0] * nightFactor, c[1] * nightFactor, c[2] * nightFactor, 1],
+    });
+    const world = composeTransform({ translation: lamp.position });
+    drawPart(gl, programInfo, scene.lampMarker, world, material, uniforms);
+  }
 }
 
 // HUD em HTML é mais barato e legível que desenhar texto em WebGL.

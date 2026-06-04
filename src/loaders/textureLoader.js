@@ -20,12 +20,3 @@ export function createDefaultTextures(gl) {
 		black: createColorTexture(gl, [20, 20, 25, 255]),
 	};
 }
-
-export async function loadTexture(gl, url) {
-	return twgl.createTexture(gl, {
-		src: url,
-		flipY: true,
-		minMag: gl.LINEAR,
-		wrap: gl.REPEAT,
-	});
-}

@@ -3,7 +3,7 @@ import { CONFIG } from "../config.js";
 import { composeTransform } from "../math/transformations.js";
 import { buildHeightField } from "../utils/collision.js";
 
-// O mundo: um único modelo .obj pronto (cidade Castelia). Carrega o arquivo,
+// O mundo: um único modelo .obj pronto (cidade "wild town"). Carrega o arquivo,
 // centra a geometria na origem em X/Z, apoia o ponto mais baixo em Y=0 e
 // aplica a escala do config. Devolve { submeshes, world, bounds }, onde
 // `bounds` é a caixa envolvente já em coordenadas de mundo — é ela que limita

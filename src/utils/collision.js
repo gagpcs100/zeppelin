@@ -85,7 +85,33 @@ export function buildHeightField(positionGroups, transform, { cellSize }) {
     }
   }
 
+  removeSpikes(heights, cols, rows, SPIKE_THRESHOLD);
+
   return { minX, minZ, cellSize, cols, rows, heights };
+}
+
+// Folga (em unidades de mundo) acima da qual uma célula isolada — mais alta que
+// TODAS as 4 vizinhas — é considerada artefato (antena/poste fino capturado
+// pela grade) e não prédio. Prédios reais ocupam várias células, então têm
+// vizinhas igualmente altas e não são tocados.
+const SPIKE_THRESHOLD = 25;
+
+// Remove "picos fantasma": células isoladas muito mais altas que toda a
+// vizinhança imediata. Sem isso, uma antena de 1 célula empurra o zeppelin para
+// cima como se houvesse um prédio invisível ali. Trabalha sobre uma cópia para
+// não depender da ordem de varredura, rebaixando o pico à vizinha mais alta.
+function removeSpikes(heights, cols, rows, threshold) {
+  const src = heights.slice();
+  for (let r = 1; r < rows - 1; r++) {
+    for (let c = 1; c < cols - 1; c++) {
+      const idx = r * cols + c;
+      const h = src[idx];
+      const maxNeighbor = Math.max(
+        src[idx - 1], src[idx + 1], src[idx - cols], src[idx + cols]
+      );
+      if (h - maxNeighbor > threshold) heights[idx] = maxNeighbor;
+    }
+  }
 }
 
 // Teste ponto-em-triângulo no plano XZ por coordenadas baricêntricas (sinais).
@@ -153,4 +179,27 @@ export function maxSurfaceHeightAt(heightField, x, z, heading, samples) {
     if (h > maxH) maxH = h;
   }
   return maxH;
+}
+
+// Move (x,z) por (dx,dz) tratando os prédios como sólidos: o corpo do zeppelin
+// não entra num prédio cujo telhado esteja acima de `y - clearance`. Resolve X
+// e Z SEPARADAMENTE — assim uma batida de viés mantém a componente paralela
+// (desliza pela parede) e só barra a que entraria no prédio. Se o zeppelin está
+// alto o bastante (telhado abaixo de y - clearance), passa por cima livremente.
+//   heading/samples: mesmos do maxSurfaceHeightAt (cobrem nariz, cauda, laterais).
+// Devolve a nova posição [x, z].
+export function slideAgainstBuildings(heightField, x, z, dx, dz, y, heading, samples, clearance) {
+  const blockLevel = y - clearance;
+
+  let nx = x + dx;
+  if (maxSurfaceHeightAt(heightField, nx, z, heading, samples) > blockLevel) {
+    nx = x; // bater na parede no eixo X → cancela só o avanço em X
+  }
+
+  let nz = z + dz;
+  if (maxSurfaceHeightAt(heightField, nx, nz, heading, samples) > blockLevel) {
+    nz = z; // idem no eixo Z, já considerando o X resolvido
+  }
+
+  return [nx, nz];
 }

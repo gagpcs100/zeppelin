@@ -113,3 +113,17 @@ function normalize3(v) {
 	const len = Math.hypot(v[0], v[1], v[2]) || 1;
 	return [v[0] / len, v[1] / len, v[2] / len];
 }
+
+// Fator de noite ∈ [0,1]: 1 com o sol bem abaixo do horizonte (noite cheia),
+// 0 com o sol alto (dia). Transição suave no amanhecer/entardecer. Usado para
+// acender/apagar os postes (ver src/scene/lights.js). Deriva da MESMA direção
+// do sol que governa o céu e a luz direcional, então fica em sincronia.
+export function getNightFactor(timeOfDay) {
+	const sunY = getSunDirection(timeOfDay)[1];
+	return 1 - smoothstep(-0.05, 0.15, sunY);
+}
+
+function smoothstep(edge0, edge1, x) {
+	const t = Math.min(Math.max((x - edge0) / (edge1 - edge0), 0), 1);
+	return t * t * (3 - 2 * t);
+}

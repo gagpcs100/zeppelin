@@ -10,7 +10,9 @@ export const CONFIG = {
 	world: {
 		modelPath: '/models/cenario/OBJ/wild town/wild town.obj',
 		textureDir: '/models/cenario/OBJ/wild town/Maps',
-		scale: 0.15, // modelo cru ~11977×1646×6944 → ~1198×165×694 unidades
+		scale: 0.15, // modelo cru ~11977×1646×6944 → ~1198×247×694 unidades
+		// (atenção: as torres mais altas chegam a ~247 — bem acima de
+		// zeppelin.maxHeight=180; a colisão eleva o teto localmente sobre elas)
 		// Colisão com os prédios: grade de alturas (height field). cellSize em
 		// unidades de mundo (mundo ~1198×694 → grade ~300×174 células).
 		collision: { cellSize: 4 },
@@ -24,12 +26,12 @@ export const CONFIG = {
 		propellerSpeed: 16, // rad/s — rotação contínua da hélice
 		minHeight: 6,
 		maxHeight: 180,
-		buildingClearance: 8, // folga (em Y) que o zeppelin mantém acima dos telhados
-		buildingPushEase: 5, // suavização da subida sobre prédios (maior = sobe mais rápido)
+		buildingClearance: 8, // folga acima dos telhados E margem do bloqueio lateral
+		//                       contra os prédios (ver slideAgainstBuildings)
 		// Meia-extensão do corpo, para amostrar a colisão em vários pontos (nariz,
 		// cauda e laterais) e não só no centro — o corpo do zeppelin é alongado.
 		bodyHalfLength: 14, // ~metade do comprimento (nariz↔cauda) em unidades de mundo
-		bodyHalfWidth: 5,   // ~metade da largura (lateral)
+		bodyHalfWidth: 5, // ~metade da largura (lateral)
 		accelEase: 2.5, // suavização da aceleração (maior = resposta mais rápida)
 	},
 
@@ -46,10 +48,11 @@ export const CONFIG = {
 		smooth: 5.0, // fator de suavização (lerp) das câmeras que seguem
 	},
 
+	// Mouse: o cursor longe do centro do canvas vira curva (eixo X) e
+	// subida/descida (eixo Y). A zona morta central evita deriva com o cursor
+	// quase parado no meio da tela.
 	mouse: {
-		turnRate: 1.9, // rad/s de curva com o cursor no canto da tela
-		climbRate: 14, // m/s de subida/descida com o cursor no topo/base
-		deadZone: 0.08, // fração central da tela sem resposta
+		deadZone: 0.08, // raio da fração central da tela sem resposta
 	},
 
 	// Ciclo dia/noite: o tempo avança sozinho (um ciclo completo a cada
@@ -58,5 +61,59 @@ export const CONFIG = {
 	dayCycle: {
 		cycleSeconds: 300, // 5 minutos para um ciclo completo (dia + noite)
 		startTime: 0.34, // 0=meia-noite, 0.25=amanhecer, 0.5=meio-dia, 0.75=entardecer
+	},
+
+	// Luzes pontuais: postes espalhados pela cidade (acendem à noite) e um
+	// farol (spotlight) preso ao zeppelin. Ver src/scene/lights.js.
+	lights: {
+		maxPointLights: 12,
+		lampHeight: 6, // altura do poste acima da superfície (m)
+		lampRange: 70, // alcance da luz do poste (m)
+		lampColor: [1.0, 0.75, 0.4], // luz quente
+		lampIntensity: 1.3,
+		lampMarkerSize: 1.5, // raio da esferinha emissiva que marca o poste
+		lampPositions: [
+			// XZ no mundo (~1198×694, centrado na origem)
+			[-300, -150],
+			[-100, -200],
+			[120, -120],
+			[320, -180],
+			[-280, 160],
+			[-60, 90],
+			[180, 170],
+			[340, 120],
+		],
+		headlight: {
+			range: 90,
+			color: [1.0, 0.97, 0.85],
+			intensity: 2.5,
+			cosCutoff: 0.86, // cos do meio-ângulo do cone (~30°)
+			forward: 18, // deslocamento à frente do centro do zeppelin
+			down: 4, // deslocamento para baixo
+		},
+	},
+
+	// Blob shadow: disco translúcido sob o zeppelin (ver src/objects/Shadow.js).
+	shadow: {
+		baseSize: 26, // tamanho do disco junto ao solo
+		maxSize: 60, // tamanho máximo quando voando alto
+		baseAlpha: 0.45,
+		epsilon: 0.5, // folga acima da superfície para não dar z-fighting
+	},
+
+	// Rádio do zeppelin: toca jazz de um diretório público de rádios de
+	// internet (Radio Browser API, sem chave). Áudio via <audio> nativo; ver
+	// src/radio/. Só toca streams https (o deploy é https → mixed-content
+	// bloquearia http). Controles: painel HTML + teclas R (liga/pausa), .
+	// (pula estação), - / = (volume).
+	radio: {
+		apiServers: [
+			'https://de1.api.radio-browser.info',
+			'https://nl1.api.radio-browser.info',
+		],
+		tag: 'jazz',
+		stationLimit: 40,
+		defaultVolume: 0.6,
+		volumeStep: 0.1,
 	},
 };
