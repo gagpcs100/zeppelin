@@ -1,4 +1,4 @@
-import { CONFIG } from "../config.js";
+import { CONFIG } from '../config.js';
 
 // Ciclo dia/noite. Tudo gira em torno de `timeOfDay` ∈ [0,1):
 //   0.00 meia-noite · 0.25 amanhecer · 0.50 meio-dia · 0.75 entardecer.
@@ -10,12 +10,48 @@ import { CONFIG } from "../config.js";
 // linearmente; a tabela "dá a volta" (após o último volta ao primeiro).
 const KEYFRAMES = [
 	// t,    zênite (céu alto),       horizonte (céu baixo),   luz difusa,             ambiente
-	{ t: 0.0,  zenith: [0.02, 0.03, 0.09], horizon: [0.06, 0.07, 0.15], diffuse: [0.20, 0.24, 0.42], ambient: [0.07, 0.08, 0.14] }, // noite
-	{ t: 0.22, zenith: [0.07, 0.08, 0.18], horizon: [0.18, 0.14, 0.24], diffuse: [0.32, 0.32, 0.46], ambient: [0.11, 0.11, 0.17] }, // pré-amanhecer
-	{ t: 0.30, zenith: [0.33, 0.40, 0.62], horizon: [0.95, 0.53, 0.30], diffuse: [0.90, 0.58, 0.38], ambient: [0.24, 0.22, 0.24] }, // amanhecer
-	{ t: 0.50, zenith: [0.22, 0.45, 0.82], horizon: [0.66, 0.80, 0.96], diffuse: [0.82, 0.80, 0.72], ambient: [0.30, 0.31, 0.34] }, // meio-dia
-	{ t: 0.70, zenith: [0.31, 0.33, 0.58], horizon: [0.97, 0.45, 0.24], diffuse: [0.88, 0.54, 0.34], ambient: [0.24, 0.21, 0.23] }, // entardecer
-	{ t: 0.78, zenith: [0.08, 0.09, 0.20], horizon: [0.22, 0.14, 0.24], diffuse: [0.34, 0.30, 0.44], ambient: [0.12, 0.12, 0.18] }, // crepúsculo
+	{
+		t: 0.0,
+		zenith: [0.02, 0.03, 0.09],
+		horizon: [0.06, 0.07, 0.15],
+		diffuse: [0.2, 0.24, 0.42],
+		ambient: [0.07, 0.08, 0.14],
+	}, // noite
+	{
+		t: 0.22,
+		zenith: [0.07, 0.08, 0.18],
+		horizon: [0.18, 0.14, 0.24],
+		diffuse: [0.32, 0.32, 0.46],
+		ambient: [0.11, 0.11, 0.17],
+	}, // pré-amanhecer
+	{
+		t: 0.3,
+		zenith: [0.33, 0.4, 0.62],
+		horizon: [0.95, 0.53, 0.3],
+		diffuse: [0.9, 0.58, 0.38],
+		ambient: [0.24, 0.22, 0.24],
+	}, // amanhecer
+	{
+		t: 0.5,
+		zenith: [0.22, 0.45, 0.82],
+		horizon: [0.66, 0.8, 0.96],
+		diffuse: [0.82, 0.8, 0.72],
+		ambient: [0.3, 0.31, 0.34],
+	}, // meio-dia
+	{
+		t: 0.7,
+		zenith: [0.31, 0.33, 0.58],
+		horizon: [0.97, 0.45, 0.24],
+		diffuse: [0.88, 0.54, 0.34],
+		ambient: [0.24, 0.21, 0.23],
+	}, // entardecer
+	{
+		t: 0.78,
+		zenith: [0.08, 0.09, 0.2],
+		horizon: [0.22, 0.14, 0.24],
+		diffuse: [0.34, 0.3, 0.44],
+		ambient: [0.12, 0.12, 0.18],
+	}, // crepúsculo
 ];
 
 export function createDayCycle() {
@@ -23,11 +59,12 @@ export function createDayCycle() {
 }
 
 export function updateDayCycle(cycle, input, deltaTime) {
-	cycle.timeOfDay = (cycle.timeOfDay + deltaTime / CONFIG.dayCycle.cycleSeconds) % 1;
+	cycle.timeOfDay =
+		(cycle.timeOfDay + deltaTime / CONFIG.dayCycle.cycleSeconds) % 1;
 
 	// Tecla T (disparo único por toque): se é dia, salta para a meia-noite;
 	// se é noite, salta para o meio-dia.
-	const tDown = input.keys.has("KeyT");
+	const tDown = input.keys.has('KeyT');
 	if (tDown && !cycle.tWasDown) {
 		const isDay = cycle.timeOfDay > 0.25 && cycle.timeOfDay < 0.75;
 		cycle.timeOfDay = isDay ? 0.0 : 0.5;
@@ -106,7 +143,11 @@ function sampleKeyframes(t) {
 }
 
 function lerp3(a, b, k) {
-	return [a[0] + (b[0] - a[0]) * k, a[1] + (b[1] - a[1]) * k, a[2] + (b[2] - a[2]) * k];
+	return [
+		a[0] + (b[0] - a[0]) * k,
+		a[1] + (b[1] - a[1]) * k,
+		a[2] + (b[2] - a[2]) * k,
+	];
 }
 
 function normalize3(v) {

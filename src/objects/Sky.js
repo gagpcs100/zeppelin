@@ -1,7 +1,7 @@
-import * as twgl from "twgl.js";
-import { composeTransform } from "../math/transformations.js";
-import { createMaterial } from "../utils/helpers.js";
-import { getCelestial } from "../scene/dayCycle.js";
+import * as twgl from 'twgl.js';
+import { composeTransform } from '../math/transformations.js';
+import { createMaterial } from '../utils/helpers.js';
+import { getCelestial } from '../scene/dayCycle.js';
 
 const m4 = twgl.m4;
 
@@ -37,10 +37,24 @@ export function drawSky(gl, programInfo, sky, camera, timeOfDay, drawPart) {
 	gl.depthMask(false);
 
 	if (sun.visible) {
-		drawPart(gl, programInfo, sky.sphere, bodyWorld(sun.dir, 70), sky.sunMaterial, uniforms);
+		drawPart(
+			gl,
+			programInfo,
+			sky.sphere,
+			bodyWorld(sun.dir, 70),
+			sky.sunMaterial,
+			uniforms,
+		);
 	}
 	if (moon.visible) {
-		drawPart(gl, programInfo, sky.sphere, bodyWorld(moon.dir, 52), sky.moonMaterial, uniforms);
+		drawPart(
+			gl,
+			programInfo,
+			sky.sphere,
+			bodyWorld(moon.dir, 52),
+			sky.moonMaterial,
+			uniforms,
+		);
 	}
 
 	gl.depthMask(true);

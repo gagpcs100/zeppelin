@@ -6,13 +6,15 @@
 		"dev": "vite",
 		"build": "vite build",
 		"preview": "vite preview",
-		"test": "vitest run"
+		"format": "prettier --write .",
+		"format:check": "prettier --check ."
 	},
 	"dependencies": {
 		"twgl.js": "^6.0.4",
 		"vite": "^7.0.0"
 	},
 	"devDependencies": {
-		"vitest": "^4.1.6"
+		"vitest": "^4.1.6",
+		"prettier": "^3.8.1"
 	}
 }

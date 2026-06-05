@@ -1,5 +1,5 @@
-import { CONFIG } from "../config.js";
-import { getNightFactor } from "./dayCycle.js";
+import { CONFIG } from '../config.js';
+import { getNightFactor } from './dayCycle.js';
 
 // Monta, por frame, a lista de luzes pontuais da cena e a "achata" em arrays
 // prontos para os uniformes do shader Phong. Cada luz tem o formato:
@@ -22,7 +22,11 @@ export function buildLampLights(lamps, nightFactor) {
 // de voo e ligeiramente para baixo. Como os postes, escala pelo nightFactor —
 // apaga de dia, acende à noite.
 export function buildHeadlight(zeppelin, cfg, nightFactor) {
-	const fwd = [Math.cos(zeppelin.rotationY), 0, -Math.sin(zeppelin.rotationY)];
+	const fwd = [
+		Math.cos(zeppelin.rotationY),
+		0,
+		-Math.sin(zeppelin.rotationY),
+	];
 	const pos = [
 		zeppelin.position[0] + fwd[0] * cfg.forward,
 		zeppelin.position[1] - cfg.down,
@@ -61,7 +65,11 @@ export function flattenLights(lights, max) {
 // Integração: combina postes (gated por nightFactor) + farol do zeppelin.
 export function assembleLights(scene, nightFactor) {
 	const lamps = buildLampLights(scene.lamps, nightFactor);
-	const headlight = buildHeadlight(scene.zeppelin, CONFIG.lights.headlight, nightFactor);
+	const headlight = buildHeadlight(
+		scene.zeppelin,
+		CONFIG.lights.headlight,
+		nightFactor,
+	);
 	return flattenLights([...lamps, headlight], CONFIG.lights.maxPointLights);
 }
 
