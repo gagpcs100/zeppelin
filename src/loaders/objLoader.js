@@ -2,11 +2,6 @@ import * as twgl from 'twgl.js';
 import { parseMtl } from './mtlParser.js';
 import { createMaterial } from '../utils/helpers.js';
 
-// Resolve um caminho de asset da pasta public/ levando em conta o `base` do
-// Vite (ex.: "/zeppelin/"). Um fetch em runtime NÃO passa pela reescrita de
-// caminhos do Vite, então um caminho absoluto "/models/..." cairia fora do
-// base e daria 404. `base` assume o valor do Vite (`import.meta.env.BASE_URL`)
-// por padrão e pode ser passado explicitamente.
 export function resolveAssetUrl(path, base = import.meta.env.BASE_URL) {
 	const cleanBase = base.endsWith('/') ? base.slice(0, -1) : base;
 	const cleanPath = path.startsWith('/') ? path : '/' + path;
@@ -18,12 +13,7 @@ export function resolveAssetUrl(path, base = import.meta.env.BASE_URL) {
 // `bounds` é a caixa envolvente da geometria crua (antes de qualquer
 // transformação), útil para enquadrar e para colisão.
 //   options.textureDir  diretório das texturas (default: diretório do .obj).
-//                        Útil quando o .mtl referencia texturas que estão em
-//                        uma subpasta diferente. O caminho do .mtl é reduzido
-//                        ao nome do arquivo (basename), ignorando subpastas.
 export async function loadObjModel(gl, url, options = {}) {
-	// Resolve o URL contra o base do Vite — o .mtl e as texturas são buscados
-	// relativos a este diretório, então o ajuste se propaga para todos.
 	const fullUrl = resolveAssetUrl(url);
 	const response = await fetch(encodeURI(fullUrl));
 	if (!response.ok) throw new Error(`Erro ao carregar OBJ: ${url}`);
@@ -38,8 +28,6 @@ export async function loadObjModel(gl, url, options = {}) {
 		textureDir = resolved.endsWith('/') ? resolved : resolved + '/';
 	}
 
-	// Carrega o .mtl, se declarado. Falha de .mtl não é fatal: seguimos com
-	// materiais padrão (cinza sem textura).
 	let mtl = {};
 	if (mtllib) {
 		try {
@@ -51,7 +39,7 @@ export async function loadObjModel(gl, url, options = {}) {
 	}
 
 	const submeshes = [];
-	const textureCache = new Map(); // nome do arquivo → textura (evita recarga)
+	const textureCache = new Map();
 	const min = [Infinity, Infinity, Infinity];
 	const max = [-Infinity, -Infinity, -Infinity];
 	for (const group of groups) {
@@ -74,8 +62,6 @@ export async function loadObjModel(gl, url, options = {}) {
 		const def = group.material ? mtl[group.material] : null;
 		let texture = null;
 		if (def && def.map) {
-			// O .mtl pode prefixar a textura com uma subpasta (ex.: "wild
-			// town/x.jpg"); só o nome do arquivo importa — `textureDir` resolve.
 			const mapName = def.map.split(/[/\\]/).pop();
 			texture = textureCache.get(mapName);
 			if (!texture) {
@@ -135,8 +121,6 @@ export function parseObj(text) {
 
 	// Garante que existe um grupo ativo antes de emitir vértices. Há UM grupo
 	// por material: se o material já apareceu, reaproveita o grupo existente.
-	// Exportadores (ex.: SketchUp) costumam intercalar `usemtl` — sem essa
-	// fusão, um modelo grande viraria milhares de grupos (e de texturas).
 	function ensureGroup(material) {
 		if (current && current.material === material) return;
 		let group = groupByMaterial.get(material);

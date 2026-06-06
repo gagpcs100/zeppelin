@@ -5,9 +5,7 @@ import { buildHeightField } from '../utils/collision.js';
 
 // O mundo: um único modelo .obj pronto (cidade "wild town"). Carrega o arquivo,
 // centra a geometria na origem em X/Z, apoia o ponto mais baixo em Y=0 e
-// aplica a escala do config. Devolve { submeshes, world, bounds }, onde
-// `bounds` é a caixa envolvente já em coordenadas de mundo — é ela que limita
-// o voo do zeppelin (ver collision.js).
+// aplica a escala do config. 
 export async function createWorld(gl) {
 	const cfg = CONFIG.world;
 	const { submeshes, bounds, positions } = await loadObjModel(
@@ -20,7 +18,6 @@ export async function createWorld(gl) {
 	);
 
 	const s = cfg.scale;
-	// Translação que, após a escala, centra X/Z na origem e leva o piso a Y=0.
 	const translation = [
 		-((bounds.min[0] + bounds.max[0]) / 2) * s,
 		-bounds.min[1] * s,
@@ -41,8 +38,7 @@ export async function createWorld(gl) {
 	};
 
 	// Grade de alturas em coordenadas de mundo: mesma escala+translação aplicada
-	// à geometria. Alimenta a colisão por empurrão vertical (ver collision.js e
-	// updateZeppelin). `positions` pode não vir se o loader falhar — protege-se.
+	// à geometria.
 	const heightField = positions
 		? buildHeightField(positions, { scale: s, translation }, cfg.collision)
 		: null;

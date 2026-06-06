@@ -29,8 +29,7 @@ export function updateAutopilot(
 	const pDown = input.keys.has('KeyP');
 	if (pDown && !autopilot.pWasDown) {
 		autopilot.active = !autopilot.active;
-		// Ao ligar, começa a órbita no ângulo atual do zeppelin para não dar
-		// um solavanco — ele entra na rota suavemente.
+
 		if (autopilot.active)
 			autopilot.angle = currentAngle(zeppelin, worldBounds);
 	}
@@ -61,8 +60,6 @@ function currentAngle(zeppelin, worldBounds) {
 function steerAlongOrbit(autopilot, zeppelin, worldBounds, deltaTime) {
 	const o = orbit(worldBounds);
 
-	// O ângulo da órbita avança no ritmo da própria velocidade de cruzeiro,
-	// assim o ponto-alvo nunca "foge" do zeppelin.
 	const avgRadius = Math.max((o.rx + o.rz) / 2, 1);
 	autopilot.angle += (CONFIG.zeppelin.speed / avgRadius) * deltaTime;
 

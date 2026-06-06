@@ -1,6 +1,4 @@
-// Painel HTML sobreposto da rádio. Sem framework: cria os nós, liga os handlers
-// e expõe update(state) para refletir o estado do player. handlers =
-// { onToggle, onNext, onVolume, onRetry }.
+// Painel HTML sobreposto da rádio.
 export function createRadioPanel(handlers) {
 	const root = document.createElement('div');
 	root.style.cssText = [

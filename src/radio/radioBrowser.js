@@ -2,9 +2,6 @@
 // funções: normalizeStations (pura) limpa a lista crua; fetchJazzStations busca
 // num servidor-espelho.
 
-// Filtra/normaliza a lista crua de estações. Só mantém streams https (a página
-// é https e o browser bloqueia áudio http por mixed-content), remove duplicatas
-// por URL e limita a quantidade.
 export function normalizeStations(raw, limit) {
 	const seen = new Set();
 	const out = [];
@@ -24,9 +21,6 @@ export function normalizeStations(raw, limit) {
 	return out;
 }
 
-// Busca estações da tag configurada (jazz). Tenta cada servidor-espelho até um
-// devolver estações https válidas. Lança se todos falharem (o chamador trata
-// mostrando "rádio indisponível").
 export async function fetchJazzStations(cfg) {
 	const params = new URLSearchParams({
 		hidebroken: 'true',

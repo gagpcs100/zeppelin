@@ -1,8 +1,6 @@
 // Colisão simples por caixa envolvente (AABB). O mundo é um único modelo
 // .obj; o zeppelin é mantido dentro dos limites horizontais dessa caixa.
 
-// Limita um ponto ao retângulo [min, max] no plano XZ, recuado por `margin`.
-// O eixo Y não é tocado (a altura é tratada à parte, por min/maxHeight).
 export function clampToBounds(point, bounds, margin = 0) {
 	const clampAxis = (value, lo, hi) => {
 		const a = lo + margin;
@@ -115,8 +113,7 @@ const SPIKE_THRESHOLD = 25;
 
 // Remove "picos fantasma": células isoladas muito mais altas que toda a
 // vizinhança imediata. Sem isso, uma antena de 1 célula empurra o zeppelin para
-// cima como se houvesse um prédio invisível ali. Trabalha sobre uma cópia para
-// não depender da ordem de varredura, rebaixando o pico à vizinha mais alta.
+// cima como se houvesse um prédio invisível ali. 
 function removeSpikes(heights, cols, rows, threshold) {
 	const src = heights.slice();
 	for (let r = 1; r < rows - 1; r++) {
@@ -141,7 +138,7 @@ function pointInTriangleXZ(px, pz, ax, az, bx, bz, cx, cz) {
 	const d3 = sign(px, pz, cx, cz, ax, az);
 	const hasNeg = d1 < 0 || d2 < 0 || d3 < 0;
 	const hasPos = d1 > 0 || d2 > 0 || d3 > 0;
-	return !(hasNeg && hasPos); // dentro quando todos têm o mesmo sinal (ou 0)
+	return !(hasNeg && hasPos);
 }
 
 function sign(px, pz, ax, az, bx, bz) {
@@ -150,7 +147,7 @@ function sign(px, pz, ax, az, bx, bz) {
 
 // Altura da superfície (Y de mundo) sob o ponto (x,z), com interpolação
 // bilinear entre as 4 células vizinhas — isso dá uma rampa suave nas bordas
-// dos prédios em vez de um degrau. Pontos fora da grade devolvem o chão (0).
+// dos prédios em vez de um degrau.
 export function surfaceHeightAt(heightField, x, z) {
 	const { minX, minZ, cellSize, cols, rows, heights } = heightField;
 
@@ -209,7 +206,6 @@ export function maxSurfaceHeightAt(heightField, x, z, heading, samples) {
 // (desliza pela parede) e só barra a que entraria no prédio. Se o zeppelin está
 // alto o bastante (telhado abaixo de y - clearance), passa por cima livremente.
 //   heading/samples: mesmos do maxSurfaceHeightAt (cobrem nariz, cauda, laterais).
-// Devolve a nova posição [x, z].
 export function slideAgainstBuildings(
 	heightField,
 	x,
@@ -225,14 +221,14 @@ export function slideAgainstBuildings(
 
 	let nx = x + dx;
 	if (maxSurfaceHeightAt(heightField, nx, z, heading, samples) > blockLevel) {
-		nx = x; // bater na parede no eixo X → cancela só o avanço em X
+		nx = x; 
 	}
 
 	let nz = z + dz;
 	if (
 		maxSurfaceHeightAt(heightField, nx, nz, heading, samples) > blockLevel
 	) {
-		nz = z; // idem no eixo Z, já considerando o X resolvido
+		nz = z;
 	}
 
 	return [nx, nz];

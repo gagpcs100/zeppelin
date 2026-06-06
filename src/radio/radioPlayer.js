@@ -1,8 +1,5 @@
 import { clamp } from '../utils/helpers.js';
 
-// Máquina de estado em volta de um HTMLAudioElement recebido por parâmetro.
-// Mantém a estação atual, play/pausa e volume, e chama onChange a cada mudança
-// para a UI redesenhar.
 export function createRadioPlayer(audio, onChange) {
 	const state = {
 		stations: [],
@@ -21,8 +18,6 @@ export function createRadioPlayer(audio, onChange) {
 		if (st) audio.src = st.url;
 	}
 
-	// Estação morta → pula sozinha para a próxima (a Radio Browser tem muitas
-	// estações que não respondem, mesmo com hidebroken).
 	audio.addEventListener('error', () => {
 		if (state.status === 'ready' && state.stations.length > 1) next();
 	});
@@ -50,7 +45,7 @@ export function createRadioPlayer(audio, onChange) {
 				await audio.play();
 				state.playing = true;
 			} catch {
-				state.playing = false; // autoplay/stream bloqueado
+				state.playing = false;
 			}
 		}
 		notify();

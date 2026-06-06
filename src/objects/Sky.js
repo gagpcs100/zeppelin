@@ -29,11 +29,10 @@ export function drawSky(gl, programInfo, sky, camera, timeOfDay, drawPart) {
 	const uniforms = {
 		u_view: view,
 		u_projection: camera.projection,
-		u_lightingEnabled: false, // emissivo: a cor do material é a cor final
+		u_lightingEnabled: false, 
 		u_fogEnabled: false,
 	};
 
-	// Sem escrita no depth buffer: o mundo (desenhado depois) cobre o céu.
 	gl.depthMask(false);
 
 	if (sun.visible) {
@@ -60,8 +59,6 @@ export function drawSky(gl, programInfo, sky, camera, timeOfDay, drawPart) {
 	gl.depthMask(true);
 }
 
-// Matriz de mundo de um corpo celeste: posicionado na sua direção, a uma
-// distância grande (mas dentro do plano distante da câmera), com o raio dado.
 function bodyWorld(dir, radius) {
 	const distance = 1000;
 	return composeTransform({

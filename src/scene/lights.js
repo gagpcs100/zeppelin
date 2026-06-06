@@ -62,7 +62,6 @@ export function flattenLights(lights, max) {
 	return { count, pos, color, range, dir, cosCutoff };
 }
 
-// Integração: combina postes (gated por nightFactor) + farol do zeppelin.
 export function assembleLights(scene, nightFactor) {
 	const lamps = buildLampLights(scene.lamps, nightFactor);
 	const headlight = buildHeadlight(

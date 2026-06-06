@@ -22,7 +22,6 @@ const COLLISION_SAMPLES = [
 
 // Cria o zeppelin: corpo carregado do .obj (multi-material texturizado) e uma
 // hélice procedural na traseira como componente de rotação contínua.
-// É assíncrono porque carrega um arquivo — `createScene` deve usar `await`.
 export async function createZeppelin(gl, textures) {
 	let bodySubmeshes = [];
 	try {
@@ -43,10 +42,6 @@ export async function createZeppelin(gl, textures) {
 		velocity: 0,
 		propeller: createPropeller(gl, textures),
 		bodySubmeshes,
-		// Transform local do corpo do .obj. O modelo é Z-up (Z vai de 0 a ~483,
-		// a balloon em Z alto, a cabine em Z baixo) — a rotação -90° em X o
-		// converte para Y-up. Comprimento ~1384 no eixo X, nariz em +X (grupo
-		// "front"). A translação é -R·S·centro: recentra na origem após girar.
 		bodyLocal: composeTransform({
 			translation: [-1.401, -4.827, 0],
 			rotation: [-Math.PI / 2, 0, 0],
@@ -55,9 +50,6 @@ export async function createZeppelin(gl, textures) {
 	};
 }
 
-// Traduz o input do jogador (teclado + mouse) no formato de comandos de voo
-// { turn, climb, throttle } que `updateZeppelin` consome. O piloto automático
-// produz um objeto no mesmo formato — por isso a física fica num só lugar.
 export function getPlayerControls(input) {
 	const keys = input.keys;
 
@@ -78,8 +70,6 @@ export function getPlayerControls(input) {
 	return { turn, climb, throttle };
 }
 
-// Atualiza a física do zeppelin a partir de `controls` { turn, climb,
-// throttle } — venham eles do jogador ou do piloto automático.
 export function updateZeppelin(
 	zeppelin,
 	controls,
@@ -90,7 +80,6 @@ export function updateZeppelin(
 	const cfg = CONFIG.zeppelin;
 
 	// 1. Velocidade com easing (aceleração/frenagem suaves). throttle ∈ [-1,1];
-	//    a ré é mais lenta que o avanço.
 	const throttle = controls.throttle;
 	const targetVelocity =
 		throttle >= 0 ? throttle * cfg.speed : throttle * cfg.speed * 0.5;

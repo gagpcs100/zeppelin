@@ -4,7 +4,6 @@ import { updateDayCycle } from './dayCycle.js';
 import { updateAutopilot } from './autopilot.js';
 
 export function updateScene(scene, input, deltaTime, elapsedTime) {
-	// Agora passa o Zeppelin para o input conseguir saber a rotação atual dele.
 	updateInputFrame(input);
 
 	updateDayCycle(scene.dayCycle, input, deltaTime);

@@ -1,20 +1,11 @@
-// Constantes globais do projeto. Centralizar aqui evita "números mágicos"
-// espalhados pelo código e facilita ajustes finos (tamanho do mundo, FOV,
-// velocidades) em um único lugar.
+// Constantes globais do projeto
 export const CONFIG = {
 	canvasId: 'glcanvas',
 
-	// Mundo: um único modelo .obj pronto (cidade "wild town"). O World.js
-	// carrega, centra na origem, apoia no chão (Y=0) e escala por `scale`. Os
-	// limites de voo saem da bounding box resultante — não há muralhas.
 	world: {
 		modelPath: '/models/cenario/OBJ/wild town/wild town.obj',
 		textureDir: '/models/cenario/OBJ/wild town/Maps',
 		scale: 0.15, // modelo cru ~11977×1646×6944 → ~1198×247×694 unidades
-		// (atenção: as torres mais altas chegam a ~247 — bem acima de
-		// zeppelin.maxHeight=180; a colisão eleva o teto localmente sobre elas)
-		// Colisão com os prédios: grade de alturas (height field). cellSize em
-		// unidades de mundo (mundo ~1198×694 → grade ~300×174 células).
 		collision: { cellSize: 4 },
 	},
 
@@ -26,8 +17,7 @@ export const CONFIG = {
 		propellerSpeed: 16, // rad/s — rotação contínua da hélice
 		minHeight: 6,
 		maxHeight: 180,
-		buildingClearance: 8, // folga acima dos telhados E margem do bloqueio lateral
-		//                       contra os prédios (ver slideAgainstBuildings)
+		buildingClearance: 8, // folga acima dos telhados E margem do bloqueio lateral contra os prédios
 		// Meia-extensão do corpo, para amostrar a colisão em vários pontos (nariz,
 		// cauda e laterais) e não só no centro — o corpo do zeppelin é alongado.
 		bodyHalfLength: 14, // ~metade do comprimento (nariz↔cauda) em unidades de mundo
@@ -52,19 +42,18 @@ export const CONFIG = {
 	// subida/descida (eixo Y). A zona morta central evita deriva com o cursor
 	// quase parado no meio da tela.
 	mouse: {
-		deadZone: 0.08, // raio da fração central da tela sem resposta
+		deadZone: 0.08, 
 	},
 
 	// Ciclo dia/noite: o tempo avança sozinho (um ciclo completo a cada
-	// `cycleSeconds`). A tecla T salta entre dia e noite. As cores da luz e
-	// do céu por horário ficam em src/scene/dayCycle.js.
+	// `cycleSeconds`). A tecla T salta entre dia e noite. 
 	dayCycle: {
 		cycleSeconds: 300, // 5 minutos para um ciclo completo (dia + noite)
 		startTime: 0.34, // 0=meia-noite, 0.25=amanhecer, 0.5=meio-dia, 0.75=entardecer
 	},
 
 	// Luzes pontuais: postes espalhados pela cidade (acendem à noite) e um
-	// farol (spotlight) preso ao zeppelin. Ver src/scene/lights.js.
+	// farol (spotlight) preso ao zeppelin.
 	lights: {
 		maxPointLights: 12,
 		lampHeight: 6, // altura do poste acima da superfície (m)
@@ -102,10 +91,7 @@ export const CONFIG = {
 	},
 
 	// Rádio do zeppelin: toca jazz de um diretório público de rádios de
-	// internet (Radio Browser API, sem chave). Áudio via <audio> nativo; ver
-	// src/radio/. Só toca streams https (o deploy é https → mixed-content
-	// bloquearia http). Controles: painel HTML + teclas R (liga/pausa), .
-	// (pula estação), - / = (volume).
+	// internet (Radio Browser API, sem chave).
 	radio: {
 		apiServers: [
 			'https://de1.api.radio-browser.info',

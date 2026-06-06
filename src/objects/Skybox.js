@@ -20,8 +20,6 @@ export function drawSkybox(gl, programInfo, skybox, camera, skyColors) {
 
 	gl.useProgram(programInfo.program);
 
-	// View sem translação: zera a 4ª coluna (componentes de translação).
-	// Assim a câmera está "no centro" do cubo independente da posição real.
 	const viewNoTranslation = m4.copy(camera.view);
 	viewNoTranslation[12] = 0;
 	viewNoTranslation[13] = 0;
@@ -33,14 +31,13 @@ export function drawSkybox(gl, programInfo, skybox, camera, skyColors) {
 		u_world: m4.identity(),
 		u_view: viewNoTranslation,
 		u_projection: camera.projection,
-		// Cores do gradiente do céu — variam com o horário (ver dayCycle.js).
+		// Cores do gradiente do céu — variam com o horário.
 		u_skyZenith: skyColors.zenith,
 		u_skyHorizon: skyColors.horizon,
 	});
 
 	twgl.drawBufferInfo(gl, skybox.bufferInfo);
 
-	// Restaura estado padrão do pipeline.
 	gl.depthMask(true);
 	gl.enable(gl.CULL_FACE);
 }

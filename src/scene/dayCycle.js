@@ -110,8 +110,6 @@ export function getSunDirection(timeOfDay) {
 	return normalize3([Math.cos(theta), Math.sin(theta), 0.32]);
 }
 
-// --- auxiliares internos -------------------------------------------------
-
 function sampleKeyframes(t) {
 	const kf = KEYFRAMES;
 	for (let i = 0; i < kf.length; i++) {
@@ -129,8 +127,7 @@ function sampleKeyframes(t) {
 			};
 		}
 	}
-	// t antes do primeiro keyframe (faixa [0, kf[0].t)): interpola do último
-	// (que "deu a volta") para o primeiro.
+
 	const last = kf[kf.length - 1];
 	const first = kf[0];
 	const k = (t + 1 - last.t) / (first.t + 1 - last.t);
@@ -157,7 +154,7 @@ function normalize3(v) {
 
 // Fator de noite ∈ [0,1]: 1 com o sol bem abaixo do horizonte (noite cheia),
 // 0 com o sol alto (dia). Transição suave no amanhecer/entardecer. Usado para
-// acender/apagar os postes (ver src/scene/lights.js). Deriva da MESMA direção
+// acender/apagar os postes. Deriva da MESMA direção
 // do sol que governa o céu e a luz direcional, então fica em sincronia.
 export function getNightFactor(timeOfDay) {
 	const sunY = getSunDirection(timeOfDay)[1];

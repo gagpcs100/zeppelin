@@ -12,8 +12,7 @@ export function createColorTexture(gl, rgba) {
 	});
 }
 
-// Texturas usadas pelos objetos gerados em código. Hoje só a hélice precisa
-// delas (corpo do zeppelin e mundo vêm de .obj com texturas próprias).
+// Texturas usadas pelos objetos gerados em código. 
 export function createDefaultTextures(gl) {
 	return {
 		metal: createColorTexture(gl, [150, 150, 158, 255]),

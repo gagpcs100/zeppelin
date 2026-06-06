@@ -161,8 +161,7 @@ function drawLampMarkers(
 	}
 }
 
-// HUD em HTML é mais barato e legível que desenhar texto em WebGL.
-// Criado uma única vez e atualizado a cada frame.
+// HUD em HTML
 function drawHud(input, timeOfDay, autopilotActive) {
 	let hud = document.getElementById('hud');
 
